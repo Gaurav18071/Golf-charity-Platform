@@ -1,14 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "../../lib/supabase";
+import { supabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
 
-export default function Signup() {
+export default function Login() {
+
+  const router = useRouter();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleSignup = async () => {
-    const {  error } = await supabase.auth.signUp({
+  const handleLogin = async () => {
+
+    const {  error } = await supabase.auth.signInWithPassword({
       email: email,
       password: password,
     });
@@ -16,7 +21,8 @@ export default function Signup() {
     if (error) {
       alert(error.message);
     } else {
-      alert("Signup successful! Check your email.");
+      alert("Login successful!");
+      router.push("/dashboard");
     }
   };
 
@@ -24,7 +30,7 @@ export default function Signup() {
     <div className="flex flex-col items-center justify-center h-screen">
 
       <h1 className="text-3xl font-bold mb-6">
-        Create Account
+        Login
       </h1>
 
       <input
@@ -42,10 +48,10 @@ export default function Signup() {
       />
 
       <button
-        onClick={handleSignup}
+        onClick={handleLogin}
         className="bg-green-700 text-white px-6 py-2 rounded"
       >
-        Sign Up
+        Login
       </button>
 
     </div>
