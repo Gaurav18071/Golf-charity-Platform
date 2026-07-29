@@ -1,5 +1,6 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/client";
 
+const supabase = createClient();
 /**
  * Register a new user
  */
