@@ -1,141 +1,116 @@
-"use client";
+import {
+  HandCoins,
+  Target,
+  Users,
+  UserCheck,
+  BarChart3,
+} from "lucide-react";
 
-import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import {
+  WelcomeBanner,
+  StatsGrid,
+  QuickActions,
+  RecentActivity,
+} from "@/components/dashboard/overview";
 
-type ScoreRecord = {
-  id: string;
-  score: number;
-  date: string;
-  created_at: string;
-};
+export default function DashboardPage() {
+  const stats = [
+    {
+      id: "campaigns",
+      title: "Campaigns",
+      value: 12,
+      icon: <Target className="h-6 w-6" />,
+      description: "2 campaigns ending this week",
+    },
+    {
+      id: "donations",
+      title: "Total Donations",
+      value: "₹2.45L",
+      icon: <HandCoins className="h-6 w-6" />,
+      description: "+18% this month",
+    },
+    {
+      id: "subscribers",
+      title: "Subscribers",
+      value: 856,
+      icon: <Users className="h-6 w-6" />,
+      description: "34 joined this week",
+    },
+    {
+      id: "volunteers",
+      title: "Volunteers",
+      value: 42,
+      icon: <UserCheck className="h-6 w-6" />,
+      description: "8 active today",
+    },
+  ];
 
-export default function Dashboard() {
+  const quickActions = [
+    {
+      id: "campaign",
+      title: "New Campaign",
+      description: "Launch a new fundraising campaign",
+      icon: <Target className="h-6 w-6" />,
+    },
+    {
+      id: "reports",
+      title: "View Reports",
+      description: "Track fundraising performance",
+      icon: <BarChart3 className="h-6 w-6" />,
+    },
+    {
+      id: "donations",
+      title: "Manage Donations",
+      description: "Review incoming donations",
+      icon: <HandCoins className="h-6 w-6" />,
+    },
+    {
+      id: "subscribers",
+      title: "Subscribers",
+      description: "Manage your community",
+      icon: <Users className="h-6 w-6" />,
+    },
+  ];
 
-  const [score, setScore] = useState("");
-  const [scores, setScores] = useState<ScoreRecord[]>([]);
-
-  // Fetch latest 5 scores
-  const fetchScores = async () => {
-
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) return;
-
-    const { data, error } = await supabase
-      .from("scores")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(5);
-
-    if (!error) {
-      setScores((data as ScoreRecord[]) || []);
-    }
-  };
-
-  // Add new score
-  const handleAddScore = async () => {
-
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      alert("User not logged in");
-      return;
-    }
-
-    const { error } = await supabase
-      .from("scores")
-      .insert([
-        {
-          user_id: user.id,
-          score: Number(score),
-          date: new Date().toISOString()
-        }
-      ]);
-
-    if (error) {
-      alert(error.message);
-    } else {
-      alert("Score added successfully!");
-      setScore("");
-      fetchScores();
-    }
-  };
-
-  // Load scores on page load
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      void fetchScores();
-    }, 0);
-
-    return () => clearTimeout(timer);
-  }, []);
+  const activities = [
+    {
+      id: "1",
+      title: "New donation received",
+      description: "₹5,000 donated to Summer Charity Cup",
+      time: "5 min ago",
+      icon: <HandCoins className="h-5 w-5" />,
+    },
+    {
+      id: "2",
+      title: "Campaign created",
+      description: "Junior Golf Championship fundraiser",
+      time: "1 hour ago",
+      icon: <Target className="h-5 w-5" />,
+    },
+    {
+      id: "3",
+      title: "New subscriber",
+      description: "Rahul Sharma joined the newsletter",
+      time: "Yesterday",
+      icon: <Users className="h-5 w-5" />,
+    },
+  ];
 
   return (
+    <div className="space-y-8">
+      <WelcomeBanner userName="Gaurav" />
 
-    <div className="p-10">
+      <StatsGrid stats={stats} />
 
-      <h1 className="text-3xl font-bold mb-6">
-        User Dashboard
-      </h1>
+      <div className="grid gap-8 xl:grid-cols-3">
+        <div className="xl:col-span-1">
+          <QuickActions actions={quickActions} />
+        </div>
 
-      {/* Score Input */}
-
-      <div className="mb-8">
-
-        <input
-          type="number"
-          placeholder="Enter golf score"
-          className="border p-2 mr-4"
-          value={score}
-          onChange={(e) => setScore(e.target.value)}
-        />
-
-        <button
-          onClick={handleAddScore}
-          className="bg-green-700 text-white px-5 py-2 rounded"
-        >
-          Add Score
-        </button>
-
+        <div className="xl:col-span-2">
+          <RecentActivity activities={activities} />
+        </div>
       </div>
-
-
-      {/* Score List */}
-
-      <h2 className="text-xl font-semibold mb-4">
-        Last 5 Scores
-      </h2>
-
-      {scores.length === 0 ? (
-        <p>No scores yet.</p>
-      ) : (
-
-        <ul className="space-y-2">
-
-          {scores.map((s) => (
-
-            <li
-              key={s.id}
-              className="border p-3 rounded bg-gray-50"
-            >
-              <strong>Score:</strong> {s.score} <br />
-
-              <strong>Game Date:</strong>{" "}
-              {new Date(s.date).toLocaleDateString()} <br />
-
-              <strong>Uploaded:</strong>{" "}
-              {new Date(s.created_at).toLocaleString()}
-
-            </li>
-
-          ))}
-
-        </ul>
-
-      )}
-
     </div>
   );
 }

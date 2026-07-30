@@ -23,7 +23,7 @@ export default function DashboardLayout({
       <MobileDrawer />
 
       {/* Main Content */}
-      <main className="flex-1">
+      <main className="flex-1 overflow-x-hidden">
         <Topbar />
 
         <div className="p-4 lg:p-6">

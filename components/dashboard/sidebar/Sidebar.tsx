@@ -1,5 +1,5 @@
 import { SidebarHeader } from "./SidebarHeader";
-import { SidebarNav } from "./SidebarNav";
+import { SidebarNav } from "./navigation/SidebarNav";
 import { SidebarFooter } from "./SidebarFooter";
 
 export function Sidebar() {
