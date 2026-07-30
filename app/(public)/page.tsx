@@ -1,21 +1,18 @@
-import Navbar from "@/components/layout/Navbar";
-import FeaturesSection from "@/components/landing/FeaturesSection";
-import HeroSection from "@/components/landing/HeroSection";
-import HowItWorksSection from "@/app/(public)/how-it-works/HowItWorksSection";
-import LeaderboardPreviewSection from "@/components/landing/LeaderboardPreviewSection";
-import TrustSection from "@/components/landing/TrustSection";
+import type { ReactNode } from "react";
 
-export default function HomePage() {
+import Navbar from "@/components/layout/Navbar";
+
+interface PublicLayoutProps {
+  children: ReactNode;
+}
+
+export default function PublicLayout({
+  children,
+}: PublicLayoutProps) {
   return (
     <>
-      
-      <main>
-        <HeroSection />
-        <TrustSection />
-        <HowItWorksSection />
-        <FeaturesSection />
-        <LeaderboardPreviewSection />
-      </main>
+      <Navbar />
+      {children}
     </>
   );
 }
