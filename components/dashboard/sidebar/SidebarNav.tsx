@@ -1,7 +1,7 @@
 "use client";
 
 import { DASHBOARD_NAV_ITEMS } from "@/constants/dashboard";
-import { NavItem } from "./NavItem";
+import { NavItem } from "../NavItem";
 
 export function SidebarNav() {
   return (

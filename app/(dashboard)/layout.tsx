@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 
-import { Sidebar } from "@/components/dashboard/Sidebar";
-import { Topbar } from "@/components/dashboard/topbar/Topbar";
-
+import { Sidebar, Topbar } from "@/components/dashboard";
+import { SidebarProvider } from "@/components/dashboard/sidebar/SidebarProvider";
+import { MobileDrawer } from "@/components/dashboard/sidebar/MobileDrawer";
 interface DashboardLayoutProps {
   children: ReactNode;
 }
@@ -10,17 +10,28 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({
   children,
 }: DashboardLayoutProps) {
-  return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar />
+ return (
+  <SidebarProvider>
+    <div className="flex min-h-screen">
 
-      <div className="flex flex-1 flex-col">
+      {/* Desktop Sidebar */}
+      <div className="hidden lg:flex">
+        <Sidebar />
+      </div>
+
+      {/* Mobile Drawer */}
+      <MobileDrawer />
+
+      {/* Main Content */}
+      <main className="flex-1">
         <Topbar />
 
-        <main className="flex-1 overflow-y-auto p-6">
+        <div className="p-4 lg:p-6">
           {children}
-        </main>
-      </div>
+        </div>
+      </main>
+
     </div>
-  );
+  </SidebarProvider>
+);
 }
