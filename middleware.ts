@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { updateSession } from "@/lib/supabase/middleware";
+import { updateSession } from "@/src/lib/supabase/middleware";
 
 export async function middleware(request: NextRequest) {
   const { supabase, response } = await updateSession(request);
@@ -10,26 +10,28 @@ export async function middleware(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
-  // Public auth pages
+  // Public auth pages (redirect logged-in users away from these)
   const authRoutes = ["/login", "/signup"];
 
-  // Protected pages
-  const protectedRoutes = ["/dashboard"];
+  // Protected pages (redirect unauthenticated users to /login)
+  const protectedRoutes = ["/dashboard", "/profile", "/admin"];
 
   const isAuthRoute = authRoutes.some((route) =>
-    pathname.startsWith(route)
+    pathname === route || pathname.startsWith(`${route}/`)
   );
 
   const isProtectedRoute = protectedRoutes.some((route) =>
-    pathname.startsWith(route)
+    pathname === route || pathname.startsWith(`${route}/`)
   );
 
-  // Not logged in → redirect to login
+  // Unauthenticated user trying to access a protected route → redirect to /login
   if (!user && isProtectedRoute) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    const redirectUrl = new URL("/login", request.url);
+    redirectUrl.searchParams.set("redirectTo", pathname);
+    return NextResponse.redirect(redirectUrl);
   }
 
-  // Already logged in → redirect to dashboard
+  // Authenticated user trying to access login/signup → redirect to /dashboard
   if (user && isAuthRoute) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
@@ -40,6 +42,8 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     "/dashboard/:path*",
+    "/profile/:path*",
+    "/admin/:path*",
     "/login",
     "/signup",
   ],
