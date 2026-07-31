@@ -14,7 +14,16 @@ export async function middleware(request: NextRequest) {
   const authRoutes = ["/login", "/signup"];
 
   // Protected pages (redirect unauthenticated users to /login)
-  const protectedRoutes = ["/dashboard", "/profile", "/admin"];
+  const protectedRoutes = [
+    "/dashboard",
+    "/profile",
+    "/admin",
+    "/campaigns",
+    "/donations",
+    "/subscribers",
+    "/analytics",
+    "/settings",
+  ];
 
   const isAuthRoute = authRoutes.some((route) =>
     pathname === route || pathname.startsWith(`${route}/`)
@@ -44,6 +53,11 @@ export const config = {
     "/dashboard/:path*",
     "/profile/:path*",
     "/admin/:path*",
+    "/campaigns/:path*",
+    "/donations/:path*",
+    "/subscribers/:path*",
+    "/analytics/:path*",
+    "/settings/:path*",
     "/login",
     "/signup",
   ],

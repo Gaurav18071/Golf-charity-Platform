@@ -6,12 +6,171 @@ datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
+  schemas   = ["public", "auth"]
 }
 
-model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  fullName  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+// ─────────────────────────────────────────────────
+// ENUMS  (match what is already in the DB)
+// ─────────────────────────────────────────────────
+
+enum CampaignStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  CANCELLED
+
+  @@map("campaign_status")
+  @@schema("public")
+}
+
+enum DonationStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+
+  @@map("donation_status")
+  @@schema("public")
+}
+
+enum PaymentGateway {
+  RAZORPAY
+  STRIPE
+
+  @@map("payment_gateway")
+  @@schema("public")
+}
+
+enum PaymentStatus {
+  PENDING
+  AUTHORIZED
+  CAPTURED
+  FAILED
+  REFUNDED
+
+  @@map("payment_status")
+  @@schema("public")
+}
+
+enum UserRole {
+  ADMIN
+  ORGANIZER
+  DONOR
+
+  @@map("user_role")
+  @@schema("public")
+}
+
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+
+  @@map("verification_status")
+  @@schema("public")
+}
+
+// ─────────────────────────────────────────────────
+// PROFILE
+// Mirrors Supabase auth.users — created via trigger
+// on new user sign-up.
+// ─────────────────────────────────────────────────
+
+model Profile {
+  id                 String             @id @db.Uuid
+  fullName           String             @map("full_name")
+  avatarUrl          String?            @map("avatar_url")
+  role               UserRole           @default(DONOR)
+  verificationStatus VerificationStatus @default(PENDING) @map("verification_status")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+
+  campaigns          Campaign[]
+  donations          Donation[]
+
+  @@map("profiles")
+  @@schema("public")
+}
+
+// ─────────────────────────────────────────────────
+// CAMPAIGN
+// A fundraising campaign created by an organizer.
+// ─────────────────────────────────────────────────
+
+model Campaign {
+  id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizerId    String         @map("organizer_id") @db.Uuid
+  organizer      Profile        @relation(fields: [organizerId], references: [id])
+  title          String
+  slug           String         @unique
+  description    String
+  coverImageUrl  String?        @map("cover_image_url")
+  goalAmount     Decimal        @map("goal_amount") @db.Decimal(12, 2)
+  currentAmount  Decimal        @default(0) @map("current_amount") @db.Decimal(12, 2)
+  status         CampaignStatus @default(DRAFT)
+  startDate      DateTime       @map("start_date") @db.Date
+  endDate        DateTime       @map("end_date") @db.Date
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  donations      Donation[]
+
+  @@map("campaigns")
+  @@schema("public")
+}
+
+// ─────────────────────────────────────────────────
+// DONATION
+// A donor's contribution to a campaign.
+// ─────────────────────────────────────────────────
+
+model Donation {
+  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  donorId         String         @map("donor_id") @db.Uuid
+  donor           Profile        @relation(fields: [donorId], references: [id])
+  campaignId      String         @map("campaign_id") @db.Uuid
+  campaign        Campaign       @relation(fields: [campaignId], references: [id])
+  amount          Decimal        @db.Decimal(12, 2)
+  paymentProvider String         @map("payment_provider")
+  transactionId   String?        @map("transaction_id")
+  status          DonationStatus @default(PENDING)
+  donatedAt       DateTime?      @map("donated_at")
+  createdAt       DateTime       @default(now()) @map("created_at")
+
+  payment         Payment?
+
+  @@index([donorId])
+  @@index([campaignId])
+  @@map("donations")
+  @@schema("public")
+}
+
+// ─────────────────────────────────────────────────
+// PAYMENT
+// Payment transaction record (one-to-one with Donation).
+// ─────────────────────────────────────────────────
+
+model Payment {
+  id                String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  donationId        String         @unique @map("donation_id") @db.Uuid
+  donation          Donation       @relation(fields: [donationId], references: [id])
+  gateway           PaymentGateway
+  gatewayOrderId    String         @map("gateway_order_id")
+  gatewayPaymentId  String?        @map("gateway_payment_id")
+  gatewaySignature  String?        @map("gateway_signature")
+  currency          String         @default("INR")
+  amount            Decimal        @db.Decimal(12, 2)
+  fee               Decimal?       @default(0) @db.Decimal(12, 2)
+  tax               Decimal?       @default(0) @db.Decimal(12, 2)
+  netAmount         Decimal?       @map("net_amount") @db.Decimal(12, 2)
+  status            PaymentStatus  @default(PENDING)
+  failureReason     String?        @map("failure_reason")
+  gatewayResponse   Json?          @map("gateway_response")
+  processedAt       DateTime?      @map("processed_at")
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+
+  @@index([donationId])
+  @@map("payments")
+  @@schema("public")
 }

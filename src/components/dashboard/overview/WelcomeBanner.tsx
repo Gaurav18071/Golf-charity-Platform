@@ -1,9 +1,17 @@
 "use client";
 
+import { useState, useEffect } from "react";
+
 interface WelcomeBannerProps {
   userName: string;
   onCreateCampaign?: () => void;
   onViewReports?: () => void;
+}
+
+function getGreeting(hour: number): string {
+  if (hour < 12) return "Good Morning";
+  if (hour < 17) return "Good Afternoon";
+  return "Good Evening";
 }
 
 export default function WelcomeBanner({
@@ -11,15 +19,12 @@ export default function WelcomeBanner({
   onCreateCampaign,
   onViewReports,
 }: WelcomeBannerProps) {
-  const hour = new Date().getHours();
+  // Start with a stable server-safe default, update after hydration
+  const [greeting, setGreeting] = useState("Good Morning");
 
-  let greeting = "Good Evening";
-
-  if (hour < 12) {
-    greeting = "Good Morning";
-  } else if (hour < 17) {
-    greeting = "Good Afternoon";
-  }
+  useEffect(() => {
+    setGreeting(getGreeting(new Date().getHours()));
+  }, []);
 
   return (
     <section className="rounded-3xl bg-gradient-to-r from-emerald-600 to-emerald-800 p-6 sm:p-8 text-white shadow-lg">
