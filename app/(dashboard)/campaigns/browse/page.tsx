@@ -3,6 +3,7 @@ import { prisma } from "@/src/lib/prisma";
 import { CampaignStatus } from "@prisma/client";
 import { CampaignCardWidget } from "@/components/dashboard/widgets";
 import type { CampaignWidgetItem } from "@/components/dashboard/widgets";
+import SortSelect from "@/components/dashboard/campaigns/SortSelect";
 
 export const dynamic = "force-dynamic";
 
@@ -69,12 +70,6 @@ export default async function BrowseCampaignsPage({ searchParams }: PageProps) {
     { label: "Draft",     value: "DRAFT" },
   ];
 
-  const SORT_OPTIONS = [
-    { label: "Newest",      value: "newest" },
-    { label: "Most Raised", value: "raised" },
-    { label: "Oldest",      value: "oldest" },
-  ];
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -102,25 +97,7 @@ export default async function BrowseCampaignsPage({ searchParams }: PageProps) {
         </form>
 
         {/* Sort */}
-        <form method="GET">
-          {q && <input type="hidden" name="q" value={q} />}
-          {status && <input type="hidden" name="status" value={status} />}
-          <select
-            name="sort"
-            defaultValue={sort ?? "newest"}
-            onChange={(e) => {
-              // handled server-side via form submit
-              void e;
-            }}
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-500 focus:outline-none"
-          >
-            {SORT_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </form>
+        <SortSelect defaultValue={sort ?? "newest"} q={q} status={status} />
       </div>
 
       {/* Status tabs */}

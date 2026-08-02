@@ -23,6 +23,9 @@ export async function middleware(request: NextRequest) {
     "/subscribers",
     "/analytics",
     "/settings",
+    "/organizer",
+    "/notifications",
+    "/support",
   ];
 
   const isAuthRoute = authRoutes.some((route) =>
@@ -58,6 +61,9 @@ export const config = {
     "/subscribers/:path*",
     "/analytics/:path*",
     "/settings/:path*",
+    "/organizer/:path*",
+    "/notifications/:path*",
+    "/support/:path*",
     "/login",
     "/signup",
   ],
