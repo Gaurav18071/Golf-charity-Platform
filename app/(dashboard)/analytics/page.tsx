@@ -11,6 +11,8 @@ import { CampaignStatus, DonationStatus } from "@prisma/client";
 import TopCampaignsTable from "@/src/components/dashboard/analytics/TopCampaignsTable";
 import DonationsByStatusChart from "@/src/components/dashboard/analytics/DonationsByStatusChart";
 
+export const dynamic = "force-dynamic";
+
 function formatCurrency(amount: number): string {
   if (amount >= 100000) return `₹${(amount / 100000).toFixed(2)}L`;
   if (amount >= 1000) return `₹${(amount / 1000).toFixed(1)}K`;

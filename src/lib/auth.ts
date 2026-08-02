@@ -11,7 +11,10 @@ export function formatAuthError(error: unknown): string {
       return "Invalid email or password. Please check your credentials and try again.";
     }
     if (message.includes("User already registered")) {
-      return "An account with this email address already exists. Please log in.";
+      return "An account with this email address already exists. Please sign in instead.";
+    }
+    if (message.includes("user_already_exists") || message.includes("already been registered")) {
+      return "An account with this email address already exists. Please sign in instead.";
     }
     if (message.includes("Password should be at least")) {
       return "Password must be at least 6 characters long.";
@@ -48,6 +51,14 @@ export async function signUp(
 
   if (error) {
     throw new Error(formatAuthError(error));
+  }
+
+  // Supabase silently succeeds when email confirmation is OFF and the user
+  // already exists — identities array is empty in that case.
+  if (data.user && data.user.identities && data.user.identities.length === 0) {
+    throw new Error(
+      "An account with this email address already exists. Please sign in instead."
+    );
   }
 
   return data;

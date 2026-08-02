@@ -5,6 +5,8 @@ import { EmptyState } from "@/src/components/dashboard/shared";
 import DonationsTable from "@/src/components/dashboard/donations/DonationsTable";
 import DonationStatusFilter from "@/src/components/dashboard/donations/DonationStatusFilter";
 
+export const dynamic = "force-dynamic";
+
 interface PageProps {
   searchParams: Promise<{ status?: string }>;
 }

@@ -2,6 +2,8 @@ import { createClient } from "@/src/lib/supabase/server";
 import SettingsForm from "@/src/components/dashboard/settings/SettingsForm";
 import { prisma } from "@/src/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 export default async function SettingsPage() {
   const supabase = await createClient();
   const {

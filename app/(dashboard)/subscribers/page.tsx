@@ -5,6 +5,8 @@ import { EmptyState } from "@/src/components/dashboard/shared";
 import SubscribersTable from "@/src/components/dashboard/subscribers/SubscribersTable";
 import SubscriberFilter from "@/src/components/dashboard/subscribers/SubscriberFilter";
 
+export const dynamic = "force-dynamic";
+
 interface PageProps {
   searchParams: Promise<{ verified?: string }>;
 }

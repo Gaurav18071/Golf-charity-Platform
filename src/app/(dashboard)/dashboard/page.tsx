@@ -11,6 +11,9 @@ import { createClient } from "@/src/lib/supabase/server";
 import { prisma } from "@/src/lib/prisma";
 import { CampaignStatus, DonationStatus } from "@prisma/client";
 
+// Always fetch fresh data — never serve a cached build
+export const dynamic = "force-dynamic";
+
 function formatCurrency(amount: number): string {
   if (amount >= 100000) return `₹${(amount / 100000).toFixed(2)}L`;
   if (amount >= 1000) return `₹${(amount / 1000).toFixed(1)}K`;

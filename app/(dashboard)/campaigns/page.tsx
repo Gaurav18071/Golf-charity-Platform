@@ -6,6 +6,8 @@ import { EmptyState } from "@/src/components/dashboard/shared";
 import CampaignCard from "@/src/components/dashboard/campaigns/CampaignCard";
 import CampaignStatusFilter from "@/src/components/dashboard/campaigns/CampaignStatusFilter";
 
+export const dynamic = "force-dynamic";
+
 interface PageProps {
   searchParams: Promise<{ status?: string }>;
 }
@@ -136,3 +138,8 @@ export default async function CampaignsPage({ searchParams }: PageProps) {
     </div>
   );
 }
+
+
+
+
+

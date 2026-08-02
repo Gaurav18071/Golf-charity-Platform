@@ -1,6 +1,33 @@
 import { createClient } from "@/lib/supabase/client";
 
-const supabase = createClient();
+/**
+ * Format Supabase error messages into clean user-friendly text.
+ */
+export function formatAuthError(error: unknown): string {
+  if (typeof error === "string") return error;
+  if (error && typeof error === "object" && "message" in error) {
+    const message = String((error as { message: unknown }).message);
+    if (message.includes("Invalid login credentials")) {
+      return "Invalid email or password. Please check your credentials and try again.";
+    }
+    if (
+      message.includes("User already registered") ||
+      message.includes("user_already_exists") ||
+      message.includes("already been registered")
+    ) {
+      return "An account with this email already exists. Please sign in instead.";
+    }
+    if (message.includes("Password should be at least")) {
+      return "Password must be at least 6 characters long.";
+    }
+    if (message.includes("Rate limit exceeded")) {
+      return "Too many attempts. Please wait a moment and try again.";
+    }
+    return message;
+  }
+  return "An unexpected error occurred. Please try again.";
+}
+
 /**
  * Register a new user
  */
@@ -9,19 +36,27 @@ export async function signUp(
   email: string,
   password: string
 ) {
+  const supabase = createClient();
+
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options:{
-      data: {
-        full_name: fullName,
-      },
+    options: {
+      data: { full_name: fullName },
       emailRedirectTo: "http://localhost:3000/login",
     },
   });
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(formatAuthError(error));
+  }
+
+  // Supabase silently succeeds when email confirmation is OFF and the user
+  // already exists — identities array will be empty in that case.
+  if (data.user && data.user.identities && data.user.identities.length === 0) {
+    throw new Error(
+      "An account with this email already exists. Please sign in instead."
+    );
   }
 
   return data;
@@ -30,17 +65,16 @@ export async function signUp(
 /**
  * Login existing user
  */
-export async function signIn(
-  email: string,
-  password: string
-) {
+export async function signIn(email: string, password: string) {
+  const supabase = createClient();
+
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(formatAuthError(error));
   }
 
   return data;
@@ -50,10 +84,11 @@ export async function signIn(
  * Logout current user
  */
 export async function signOut() {
+  const supabase = createClient();
   const { error } = await supabase.auth.signOut();
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(formatAuthError(error));
   }
 }
 
@@ -61,15 +96,13 @@ export async function signOut() {
  * Get current authenticated user
  */
 export async function getCurrentUser() {
+  const supabase = createClient();
   const {
     data: { user },
     error,
   } = await supabase.auth.getUser();
 
-  if (error) {
-    throw new Error(error.message);
-  }
-
+  if (error) return null;
   return user;
 }
 
@@ -77,14 +110,12 @@ export async function getCurrentUser() {
  * Get current session
  */
 export async function getSession() {
+  const supabase = createClient();
   const {
     data: { session },
     error,
   } = await supabase.auth.getSession();
 
-  if (error) {
-    throw new Error(error.message);
-  }
-
+  if (error) return null;
   return session;
 }
