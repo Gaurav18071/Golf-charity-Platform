@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
+import { updateProfileRole } from "@/lib/profile";
+import type { SelectableRole } from "@/components/auth/RoleSelector";
 
 /**
  * Format Supabase error messages into clean user-friendly text.
@@ -29,12 +31,21 @@ export function formatAuthError(error: unknown): string {
 }
 
 /**
- * Register a new user
+ * Register a new user.
+ *
+ * @param fullName     - Display name stored in auth metadata + profile
+ * @param email        - User's email address
+ * @param password     - User's chosen password
+ * @param role         - Role selected at signup (default: DONOR)
+ *                       After auth creation, profile role is updated via
+ *                       lib/profile.ts. Auth remains responsible only for
+ *                       the Supabase auth.signUp call itself.
  */
 export async function signUp(
   fullName: string,
   email: string,
-  password: string
+  password: string,
+  role: SelectableRole = "DONOR"
 ) {
   const supabase = createClient();
 
@@ -57,6 +68,14 @@ export async function signUp(
     throw new Error(
       "An account with this email already exists. Please sign in instead."
     );
+  }
+
+  // Update the profile role after successful auth creation.
+  // Delegated to lib/profile.ts — auth.ts stays auth-only.
+  // Non-blocking: if profile trigger hasn't run yet, updateProfileRole
+  // handles the failure gracefully with a console.warn.
+  if (data.user) {
+    await updateProfileRole(data.user.id, role);
   }
 
   return data;

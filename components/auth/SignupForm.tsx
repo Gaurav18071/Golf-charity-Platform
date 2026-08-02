@@ -16,6 +16,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import RoleSelector, {
+  type SelectableRole,
+} from "@/components/auth/RoleSelector";
 
 export default function SignupForm() {
   const router = useRouter();
@@ -36,6 +39,8 @@ export default function SignupForm() {
     },
   });
 
+  // Default role is DONOR — most common signup type
+  const [selectedRole, setSelectedRole] = useState<SelectableRole>("DONOR");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -47,7 +52,8 @@ export default function SignupForm() {
       setError("");
       setIsDuplicateEmail(false);
 
-      await signUp(data.fullName, data.email, data.password);
+      // Pass selected role to signUp — it will update the profile after creation
+      await signUp(data.fullName, data.email, data.password, selectedRole);
 
       reset();
       setSuccess(true);
@@ -69,23 +75,30 @@ export default function SignupForm() {
 
   // ── Success screen ─────────────────────────────────────────────────────────
   if (success) {
+    const isOrganizer = selectedRole === "PENDING_ORGANIZER";
+
     return (
       <div className="space-y-6 text-center">
+        {/* Icon */}
         <div className="flex justify-center">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
             <CheckCircle2 className="h-8 w-8 text-emerald-600" />
           </div>
         </div>
 
+        {/* Message */}
         <div className="space-y-1">
           <h3 className="text-lg font-semibold text-slate-900">
             Account created!
           </h3>
           <p className="text-sm text-slate-500">
-            Your account is ready. Sign in to get started.
+            {isOrganizer
+              ? "Your organizer request has been submitted. Sign in while your account is under review."
+              : "Your account is ready. Sign in to get started."}
           </p>
         </div>
 
+        {/* Sign in CTA */}
         <Button
           type="button"
           className="w-full"
@@ -94,11 +107,15 @@ export default function SignupForm() {
           Sign in to your account
         </Button>
 
+        {/* Secondary */}
         <p className="text-sm text-slate-500">
           Want to create another?{" "}
           <button
             type="button"
-            onClick={() => setSuccess(false)}
+            onClick={() => {
+              setSuccess(false);
+              setSelectedRole("DONOR");
+            }}
             className="font-medium text-emerald-700 hover:underline"
           >
             Sign up again
@@ -177,6 +194,13 @@ export default function SignupForm() {
           </p>
         )}
       </div>
+
+      {/* ── Role selection ── */}
+      <RoleSelector
+        value={selectedRole}
+        onChange={setSelectedRole}
+        disabled={loading}
+      />
 
       {/* Error — with sign-in link if duplicate email */}
       {error && (
