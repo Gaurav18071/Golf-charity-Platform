@@ -60,6 +60,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
               onChange={(e) => setFullName(e.target.value)}
               placeholder="Your full name"
               required
+              suppressHydrationWarning
             />
           </div>
           <div className="sm:col-span-2 space-y-1.5">
@@ -70,6 +71,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
               value={initialData.email}
               readOnly
               className="cursor-not-allowed bg-slate-50 opacity-70"
+              suppressHydrationWarning
             />
             <p className="text-xs text-slate-400">Email cannot be changed here.</p>
           </div>

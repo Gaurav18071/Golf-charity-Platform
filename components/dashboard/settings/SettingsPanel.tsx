@@ -125,11 +125,11 @@ export default function SettingsPanel({ initialName, email }: SettingsPanelProps
               <div className="space-y-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="name">Display Name</Label>
-                  <Input id="name" value={fullName} onChange={(e) => setFullName(e.target.value)} />
+                  <Input id="name" value={fullName} onChange={(e) => setFullName(e.target.value)} suppressHydrationWarning />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Email Address</Label>
-                  <Input value={email} readOnly className="cursor-not-allowed bg-slate-50 opacity-70" />
+                  <Input value={email} readOnly className="cursor-not-allowed bg-slate-50 opacity-70" suppressHydrationWarning />
                   <p className="text-xs text-slate-400">Email changes require contacting support.</p>
                 </div>
               </div>
@@ -161,6 +161,7 @@ export default function SettingsPanel({ initialName, email }: SettingsPanelProps
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="Min. 8 characters"
                     autoComplete="new-password"
+                    suppressHydrationWarning
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -172,6 +173,7 @@ export default function SettingsPanel({ initialName, email }: SettingsPanelProps
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Repeat new password"
                     autoComplete="new-password"
+                    suppressHydrationWarning
                   />
                 </div>
               </div>

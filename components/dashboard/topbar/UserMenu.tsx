@@ -14,22 +14,26 @@ import {
   DropdownMenuTrigger,
 } from "@/src/components/ui/dropdown-menu";
 
-import { getCurrentUser, signOut } from "@/src/lib/auth";
+import { getCurrentUser } from "@/src/lib/auth";
+import { LogoutConfirmDialog } from "@/components/dashboard/shared/LogoutConfirmDialog";
 
 export function UserMenu() {
   const router = useRouter();
   const [userName, setUserName] = useState<string>("User");
   const [userEmail, setUserEmail] = useState<string>("");
   const [userInitials, setUserInitials] = useState<string>("U");
-  const [isLoggingOut, setIsLoggingOut] = useState<boolean>(false);
+  const [logoutOpen, setLogoutOpen] = useState(false);
 
   useEffect(() => {
     async function loadUser() {
       const user = await getCurrentUser();
       if (user) {
-        const name = user.user_metadata?.full_name || user.email?.split("@")[0] || "User";
-        const email = user.email || "";
-        
+        const name =
+          user.user_metadata?.full_name ||
+          user.email?.split("@")[0] ||
+          "User";
+        const email = user.email ?? "";
+
         setUserName(name);
         setUserEmail(email);
 
@@ -44,88 +48,81 @@ export function UserMenu() {
       }
     }
 
-    loadUser();
+    void loadUser();
   }, []);
 
-  const handleSignOut = async () => {
-    try {
-      setIsLoggingOut(true);
-      await signOut();
-      router.push("/login");
-      router.refresh();
-    } catch (err) {
-      console.error("Sign out error:", err);
-    } finally {
-      setIsLoggingOut(false);
-    }
-  };
-
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        className="flex h-11 items-center px-2 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-        aria-label="Open user menu"
-      >
-        <Avatar className="h-9 w-9">
-          <AvatarFallback className="bg-emerald-700 text-white font-semibold">
-            {userInitials}
-          </AvatarFallback>
-        </Avatar>
+    <>
+      {/* Logout confirmation dialog — lives outside the dropdown so it
+          doesn't get unmounted when the dropdown closes */}
+      <LogoutConfirmDialog open={logoutOpen} onOpenChange={setLogoutOpen} />
 
-        {/* Desktop Only */}
-        <div className="ml-2 hidden text-left lg:block">
-          <p className="text-sm font-medium leading-none text-slate-900">
-            {userName}
-          </p>
-          <p className="text-xs text-muted-foreground truncate max-w-[120px]">
-            {userEmail || "Account"}
-          </p>
-        </div>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          className="flex h-11 items-center px-2 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+          aria-label="Open user menu"
+        >
+          <Avatar className="h-9 w-9">
+            <AvatarFallback className="bg-emerald-700 text-white font-semibold">
+              {userInitials}
+            </AvatarFallback>
+          </Avatar>
 
-        <ChevronDown className="ml-2 hidden h-4 w-4 text-muted-foreground lg:block" />
-      </DropdownMenuTrigger>
-
-      <DropdownMenuContent align="end" className="w-64">
-        <DropdownMenuLabel>
-          <div className="flex flex-col space-y-1">
-            <span className="font-semibold text-slate-900 truncate">
+          {/* Desktop only */}
+          <div className="ml-2 hidden text-left lg:block">
+            <p className="text-sm font-medium leading-none text-slate-900">
               {userName}
-            </span>
-            <span className="text-xs text-muted-foreground truncate">
-              {userEmail}
-            </span>
+            </p>
+            <p className="text-xs text-muted-foreground truncate max-w-[120px]">
+              {userEmail || "Account"}
+            </p>
           </div>
-        </DropdownMenuLabel>
 
-        <DropdownMenuSeparator />
+          <ChevronDown className="ml-2 hidden h-4 w-4 text-muted-foreground lg:block" />
+        </DropdownMenuTrigger>
 
-        <DropdownMenuItem
-          onClick={() => router.push("/profile")}
-          className="cursor-pointer"
-        >
-          <UserIcon className="mr-2 h-4 w-4" />
-          <span>Profile</span>
-        </DropdownMenuItem>
+        <DropdownMenuContent align="end" className="w-64">
+          <DropdownMenuLabel>
+            <div className="flex flex-col space-y-1">
+              <span className="font-semibold text-slate-900 truncate">
+                {userName}
+              </span>
+              <span className="text-xs text-muted-foreground truncate">
+                {userEmail}
+              </span>
+            </div>
+          </DropdownMenuLabel>
 
-        <DropdownMenuItem
-          onClick={() => router.push("/dashboard")}
-          className="cursor-pointer"
-        >
-          <Settings className="mr-2 h-4 w-4" />
-          <span>Dashboard</span>
-        </DropdownMenuItem>
+          <DropdownMenuSeparator />
 
-        <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onClick={() => router.push("/profile")}
+            className="cursor-pointer"
+          >
+            <UserIcon className="mr-2 h-4 w-4" />
+            <span>My Profile</span>
+          </DropdownMenuItem>
 
-        <DropdownMenuItem
-          onClick={handleSignOut}
-          disabled={isLoggingOut}
-          className="text-red-600 focus:text-red-600 cursor-pointer"
-        >
-          <LogOut className="mr-2 h-4 w-4" />
-          <span>{isLoggingOut ? "Signing out..." : "Sign Out"}</span>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+          <DropdownMenuItem
+            onClick={() => router.push("/settings")}
+            className="cursor-pointer"
+          >
+            <Settings className="mr-2 h-4 w-4" />
+            <span>Settings</span>
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator />
+
+          {/* Opens the confirmation dialog instead of signing out immediately */}
+          <DropdownMenuItem
+            onClick={() => setLogoutOpen(true)}
+            className="cursor-pointer text-red-600 focus:text-red-600"
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            <span>Sign Out</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
   );
 }

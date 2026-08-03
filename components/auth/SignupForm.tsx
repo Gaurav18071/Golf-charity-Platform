@@ -138,6 +138,7 @@ export default function SignupForm() {
           autoComplete="name"
           placeholder={AUTH_PLACEHOLDERS.fullName}
           disabled={loading}
+          suppressHydrationWarning
           {...register("fullName")}
         />
         {errors.fullName && (
@@ -154,6 +155,7 @@ export default function SignupForm() {
           autoComplete="email"
           placeholder={AUTH_PLACEHOLDERS.email}
           disabled={loading}
+          suppressHydrationWarning
           {...register("email")}
         />
         {errors.email && (
@@ -170,6 +172,7 @@ export default function SignupForm() {
           autoComplete="new-password"
           placeholder={AUTH_PLACEHOLDERS.password}
           disabled={loading}
+          suppressHydrationWarning
           {...register("password")}
         />
         {errors.password && (
@@ -186,6 +189,7 @@ export default function SignupForm() {
           autoComplete="new-password"
           placeholder={AUTH_PLACEHOLDERS.password}
           disabled={loading}
+          suppressHydrationWarning
           {...register("confirmPassword")}
         />
         {errors.confirmPassword && (

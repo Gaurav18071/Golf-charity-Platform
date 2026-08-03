@@ -68,6 +68,7 @@ export default function LoginForm() {
           autoComplete="email"
           placeholder={AUTH_PLACEHOLDERS.email}
           disabled={loading}
+          suppressHydrationWarning
           {...register("email")}
         />
         {errors.email && (
@@ -84,6 +85,7 @@ export default function LoginForm() {
           autoComplete="current-password"
           placeholder={AUTH_PLACEHOLDERS.password}
           disabled={loading}
+          suppressHydrationWarning
           {...register("password")}
         />
         {errors.password && (

@@ -37,13 +37,9 @@ export default async function DashboardPage() {
     where: { id: user.id },
   });
 
-  // role is read from Supabase user_metadata as well — the DB enum only has
-  // ADMIN/ORGANIZER/DONOR but app-layer supports PENDING_ORGANIZER too.
-  // We read the app-layer role from user_metadata (set at signup) and fall
-  // back to the DB profile role.
-  const metaRole = user.user_metadata?.role as string | undefined;
-  const dbRole = profile?.role as string | undefined;
-  const role = metaRole ?? dbRole ?? "DONOR";
+  // Role — always trust DB profile as source of truth.
+  // user_metadata.role is only used as fallback if profile row doesn't exist yet.
+  const role = profile?.role ?? (user.user_metadata?.role as string) ?? "DONOR";
 
   // ── Shared: recent donations for current user ─────────────────────────────
   const sharedDonations = await prisma.donation.findMany({

@@ -15,9 +15,7 @@ export default async function OrganizerProfilePage() {
       prisma.profile.findUnique({ where: { id: user.id } })
     );
 
-  const role = (user.user_metadata?.role as string | undefined)
-    ?? profile?.role
-    ?? "DONOR";
+  const role = profile?.role ?? (user.user_metadata?.role as string) ?? "DONOR";
 
   // Only organizer-related roles can access this page
   if (!["ORGANIZER", "PENDING_ORGANIZER", "ADMIN"].includes(role)) {

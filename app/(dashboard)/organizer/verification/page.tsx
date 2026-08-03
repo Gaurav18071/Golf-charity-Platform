@@ -52,9 +52,17 @@ export default async function VerificationStatusPage() {
   if (!user) redirect("/login");
 
   const profile = await prisma.profile.findUnique({ where: { id: user.id } });
-  const role = (user.user_metadata?.role as string) ?? profile?.role ?? "DONOR";
 
-  if (!["PENDING_ORGANIZER", "ADMIN"].includes(role)) {
+  // Role — always trust DB profile role over metadata for page guards
+  const role = profile?.role ?? "DONOR";
+
+  // ADMIN should never need to verify as an organizer — redirect to admin dashboard
+  if (role === "ADMIN") redirect("/dashboard");
+
+  // Only PENDING_ORGANIZER and ORGANIZER can view this page
+  if (!["PENDING_ORGANIZER", "ORGANIZER"].includes(
+    (user.user_metadata?.role as string) ?? role
+  )) {
     redirect("/dashboard");
   }
 
