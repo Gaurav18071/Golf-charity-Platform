@@ -1,4 +1,4 @@
-import { createClient } from "@/src/lib/supabase/client";
+import { createClient } from "@/lib/supabase/client";
 import type { Profile, ProfileUpdate } from "@/src/features/profile/profile.types";
 
 /**

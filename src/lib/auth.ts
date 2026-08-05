@@ -1,4 +1,4 @@
-import { createClient } from "@/src/lib/supabase/client";
+import { createClient } from "@/lib/supabase/client";
 
 /**
  * Format raw Supabase authentication error messages into clean user-friendly text.
@@ -28,12 +28,16 @@ export function formatAuthError(error: unknown): string {
 }
 
 /**
- * Register a new user
+ * Register a new user.
+ * @param role - Optional app-layer role (DONOR | PENDING_ORGANIZER).
+ *               Stored in user_metadata so dashboard can read it before the
+ *               DB trigger creates the profile row.
  */
 export async function signUp(
   fullName: string,
   email: string,
-  password: string
+  password: string,
+  role: string = "DONOR"
 ) {
   const supabase = createClient();
   const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
@@ -44,6 +48,7 @@ export async function signUp(
     options: {
       data: {
         full_name: fullName,
+        role,
       },
       emailRedirectTo: `${origin}/login`,
     },

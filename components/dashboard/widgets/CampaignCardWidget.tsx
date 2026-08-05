@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Calendar, Users } from "lucide-react";
 
-type CampaignStatus = "DRAFT" | "ACTIVE" | "COMPLETED" | "CANCELLED";
+type CampaignStatus = "DRAFT" | "ACTIVE" | "COMPLETED" | "CANCELLED" | "UNDER_REVIEW" | "REJECTED";
 
 export interface CampaignWidgetItem {
   id: string;
@@ -20,10 +20,12 @@ interface CampaignCardWidgetProps {
 }
 
 const STATUS_STYLES: Record<CampaignStatus, string> = {
-  ACTIVE:    "bg-emerald-100 text-emerald-700",
-  DRAFT:     "bg-amber-100 text-amber-700",
-  COMPLETED: "bg-blue-100 text-blue-700",
-  CANCELLED: "bg-red-100 text-red-700",
+  ACTIVE:       "bg-emerald-100 text-emerald-700",
+  DRAFT:        "bg-amber-100 text-amber-700",
+  COMPLETED:    "bg-blue-100 text-blue-700",
+  CANCELLED:    "bg-red-100 text-red-700",
+  UNDER_REVIEW: "bg-purple-100 text-purple-700",
+  REJECTED:     "bg-red-100 text-red-700",
 };
 
 function formatCurrency(n: number) {

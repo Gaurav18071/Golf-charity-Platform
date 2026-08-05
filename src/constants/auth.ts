@@ -13,24 +13,18 @@ export const AUTH_PLACEHOLDERS = {
 export const AUTH_TEXT = {
   // Signup
   signupTitle: "Create your account",
-  signupSubtitle:
-    "Join the Golf Charity Platform and start making an impact.",
+  signupSubtitle: "Join the Golf Charity Platform and start making an impact.",
   signupButton: "Create Account",
-
   // Login
   loginTitle: "Welcome back",
   loginSubtitle: "Sign in to continue.",
   loginButton: "Sign In",
-
   // Forgot Password
   forgotPasswordTitle: "Forgot Password",
-  forgotPasswordSubtitle:
-    "Enter your email to receive a password reset link.",
+  forgotPasswordSubtitle: "Enter your email to receive a password reset link.",
   forgotPasswordButton: "Send Reset Link",
-
   // Reset Password
   resetPasswordTitle: "Create New Password",
-  resetPasswordSubtitle:
-    "Choose a strong password for your account.",
+  resetPasswordSubtitle: "Choose a strong password for your account.",
   resetPasswordButton: "Update Password",
 };

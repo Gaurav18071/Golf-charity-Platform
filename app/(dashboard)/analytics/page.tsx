@@ -8,8 +8,8 @@ import {
 } from "lucide-react";
 import { prisma } from "@/src/lib/prisma";
 import { CampaignStatus, DonationStatus } from "@prisma/client";
-import TopCampaignsTable from "@/src/components/dashboard/analytics/TopCampaignsTable";
-import DonationsByStatusChart from "@/src/components/dashboard/analytics/DonationsByStatusChart";
+import TopCampaignsTable from "@/components/dashboard/analytics/TopCampaignsTable";
+import DonationsByStatusChart from "@/components/dashboard/analytics/DonationsByStatusChart";
 
 export const dynamic = "force-dynamic";
 
@@ -169,7 +169,7 @@ export default async function AnalyticsPage() {
     title: c.title,
     goalAmount: Number(c.goalAmount),
     currentAmount: Number(c.currentAmount),
-    status: c.status,
+    status: c.status as "DRAFT" | "ACTIVE" | "COMPLETED" | "CANCELLED",
     donationCount: c._count.donations,
   }));
 
