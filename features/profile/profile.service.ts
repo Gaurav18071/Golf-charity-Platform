@@ -1,10 +1,11 @@
 import { createClient } from "@/lib/supabase/client";
-import type { Profile, ProfileUpdate } from "@/src/features/profile/profile.types";
+import { prisma } from "@/lib/prisma";
+import type { Profile, ProfileUpdate } from "@/features/profile/profile.types";
 
 /**
  * ProfileService
  *
- * Single responsibility: profile data access against public.profiles.
+ * Single responsibility: profile data access from Neon database via Prisma.
  *
  * Rules:
  * - No auth logic here (belongs in lib/auth.ts)
@@ -19,7 +20,7 @@ import type { Profile, ProfileUpdate } from "@/src/features/profile/profile.type
 
 /**
  * Fetch the profile for the currently authenticated user.
- * Returns null if the user has no profile row yet (trigger may not have run).
+ * Returns null if the user has no profile row yet.
  */
 export async function getCurrentProfile(): Promise<Profile | null> {
   const supabase = createClient();
@@ -34,21 +35,39 @@ export async function getCurrentProfile(): Promise<Profile | null> {
 }
 
 /**
- * Fetch a profile by its UUID.
+ * Fetch a profile by its UUID from Neon database.
  * Returns null if not found.
  */
 export async function getProfileById(id: string): Promise<Profile | null> {
-  const supabase = createClient();
+  try {
+    const profile = await prisma.profile.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        avatarUrl: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
 
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("id, full_name, avatar_url, role, verification_status, created_at, updated_at")
-    .eq("id", id)
-    .single();
+    if (!profile) return null;
 
-  if (error || !data) return null;
-
-  return mapRowToProfile(data);
+    return {
+      id: profile.id,
+      fullName: profile.fullName,
+      email: profile.email,
+      avatarUrl: profile.avatarUrl,
+      role: profile.role as Profile["role"],
+      createdAt: profile.createdAt,
+      updatedAt: profile.updatedAt,
+    };
+  } catch (error) {
+    console.error("Failed to fetch profile:", error);
+    return null;
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -71,53 +90,42 @@ export async function updateCurrentProfile(
 
   if (!user) throw new Error("Not authenticated.");
 
-  // Map camelCase fields back to snake_case for the DB
-  const payload: Record<string, unknown> = {};
-  if (update.fullName !== undefined) payload["full_name"] = update.fullName;
-  if (update.avatarUrl !== undefined) payload["avatar_url"] = update.avatarUrl;
+  // Build update payload
+  const payload: { fullName?: string; avatarUrl?: string | null } = {};
+  if (update.fullName !== undefined) payload.fullName = update.fullName;
+  if (update.avatarUrl !== undefined) payload.avatarUrl = update.avatarUrl;
 
   if (Object.keys(payload).length === 0) {
     throw new Error("No fields provided for update.");
   }
 
-  const { data, error } = await supabase
-    .from("profiles")
-    .update(payload)
-    .eq("id", user.id)
-    .select("id, full_name, avatar_url, role, verification_status, created_at, updated_at")
-    .single();
+  try {
+    const profile = await prisma.profile.update({
+      where: { id: user.id },
+      data: payload,
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        avatarUrl: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
 
-  if (error || !data) {
-    throw new Error(error?.message ?? "Failed to update profile.");
+    return {
+      id: profile.id,
+      fullName: profile.fullName,
+      email: profile.email,
+      avatarUrl: profile.avatarUrl,
+      role: profile.role as Profile["role"],
+      createdAt: profile.createdAt,
+      updatedAt: profile.updatedAt,
+    };
+  } catch (error) {
+    throw new Error(
+      error instanceof Error ? error.message : "Failed to update profile."
+    );
   }
-
-  return mapRowToProfile(data);
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// MAPPER
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Map a raw Supabase row (snake_case) to the Profile domain type (camelCase).
- * Keeps the DB column names isolated to this file only.
- */
-function mapRowToProfile(row: {
-  id: string;
-  full_name: string;
-  avatar_url: string | null;
-  role: string;
-  verification_status: string;
-  created_at: string;
-  updated_at: string;
-}): Profile {
-  return {
-    id: row.id,
-    fullName: row.full_name,
-    avatarUrl: row.avatar_url,
-    role: row.role as Profile["role"],
-    verificationStatus: row.verification_status as Profile["verificationStatus"],
-    createdAt: new Date(row.created_at),
-    updatedAt: new Date(row.updated_at),
-  };
 }

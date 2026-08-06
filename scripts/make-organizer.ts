@@ -10,7 +10,7 @@
  */
 
 import { config } from "dotenv";
-import { PrismaClient, UserRole, VerificationStatus } from "@prisma/client";
+import { PrismaClient, UserRole } from "@prisma/client";
 
 config();
 
@@ -53,7 +53,6 @@ async function main() {
 
   console.log(`\nFound: ${profile.fullName} (${profile.email})`);
   console.log(`Current role: ${profile.role}`);
-  console.log(`Current verification: ${profile.verificationStatus}`);
 
   if (profile.role === UserRole.ORGANIZER) {
     console.log("\n✅ User is already an ORGANIZER!");

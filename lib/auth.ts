@@ -66,6 +66,27 @@ export async function signUp(
     );
   }
 
+  // Create profile in Neon database
+  // Note: This happens on the client side, which is fine for now
+  // In production, you'd want this in an API route or database trigger
+  if (data.user) {
+    try {
+      await fetch("/api/profile/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: data.user.id,
+          email: data.user.email!,
+          fullName,
+          role,
+        }),
+      });
+    } catch (err) {
+      console.error("Failed to create profile:", err);
+      // Don't throw - auth succeeded, profile creation can be retried
+    }
+  }
+
   return data;
 }
 

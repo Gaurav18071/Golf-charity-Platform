@@ -8,7 +8,6 @@ import { OrganizerDashboard } from "@/components/dashboard/role-views/OrganizerD
 import { PendingOrganizerDashboard } from "@/components/dashboard/role-views/PendingOrganizerDashboard";
 import { AdminDashboard } from "@/components/dashboard/role-views/AdminDashboard";
 import type { RecentDonationItem } from "@/components/dashboard/widgets";
-import type { VerificationStatus } from "@/features/profile/profile.types";
 
 // Always server-render — never cache
 export const dynamic = "force-dynamic";
@@ -93,7 +92,7 @@ export default async function DashboardPage() {
     return (
       <PendingOrganizerDashboard
         userName={userName}
-        verificationStatus={(profile?.verificationStatus ?? "PENDING") as VerificationStatus}
+        verificationStatus="PENDING"
         profileCompletion={25}
         recentDonations={recentDonations}
       />
@@ -163,8 +162,7 @@ export default async function DashboardPage() {
       _sum: { amount: true },
     }),
     // Pending organizer requests = profiles with PENDING_ORGANIZER role
-    // (stored as DONOR in DB for now — approximation)
-    prisma.profile.count({ where: { verificationStatus: "PENDING" } }),
+    prisma.profile.count({ where: { role: "PENDING_ORGANIZER" } }),
     prisma.campaign.count({ where: { status: CampaignStatus.DRAFT } }),
     prisma.donation.findMany({
       where: { status: DonationStatus.COMPLETED },

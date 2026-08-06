@@ -9,7 +9,7 @@
  */
 
 import { config } from "dotenv";
-import { PrismaClient, CampaignStatus, UserRole, VerificationStatus } from "@prisma/client";
+import { PrismaClient, CampaignStatus, UserRole } from "@prisma/client";
 
 // Load environment variables
 config();
@@ -21,20 +21,20 @@ const AUTH_USERS = [
   {
     id: "7247c9b6-55b8-4300-9ef2-94d090b823dd",
     fullName: "Gaurav Mishra",
+    email: "gaurav@example.com",
     role: UserRole.ORGANIZER,
-    verificationStatus: VerificationStatus.VERIFIED,
   },
   {
     id: "0eb533ec-e9fb-4cfe-a8a1-4224cc1abaa0",
     fullName: "Demo Donor",
+    email: "donor@example.com",
     role: UserRole.DONOR,
-    verificationStatus: VerificationStatus.VERIFIED,
   },
   {
     id: "83e57e0c-3f9b-436d-9f4b-25eab7532c46",
     fullName: "School Account",
+    email: "school@example.com",
     role: UserRole.DONOR,
-    verificationStatus: VerificationStatus.PENDING,
   },
 ];
 
@@ -142,7 +142,7 @@ async function main() {
   for (const u of AUTH_USERS) {
     await prisma.profile.upsert({
       where: { id: u.id },
-      update: { fullName: u.fullName, role: u.role, verificationStatus: u.verificationStatus },
+      update: { fullName: u.fullName, email: u.email, role: u.role },
       create: u,
     });
     console.log(`  ✓ ${u.fullName}`);
