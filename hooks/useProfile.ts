@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { getCurrentProfile } from "@/src/features/profile/profile.service";
-import type { Profile } from "@/src/features/profile/profile.types";
+import { getCurrentProfile } from "@/features/profile/profile.service";
+import type { Profile } from "@/features/profile/profile.types";
 
 /**
  * UseProfileResult

@@ -4,8 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Dialog } from "@base-ui/react/dialog";
 import { LogOut, AlertTriangle } from "lucide-react";
-import { signOut } from "@/src/lib/auth";
-import { cn } from "@/src/lib/utils";
+import { signOut } from "@/lib/auth";
+import { cn } from "@/lib/utils";
 
 interface LogoutConfirmDialogProps {
   /**
@@ -65,6 +65,7 @@ export function LogoutConfirmDialog({
       {trigger && (
         <Dialog.Trigger
           className="contents"
+          nativeButton={false}
           render={<span />}
         >
           <span className="contents">{trigger}</span>

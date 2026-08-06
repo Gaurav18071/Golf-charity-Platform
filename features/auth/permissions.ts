@@ -1,5 +1,5 @@
-import { ROLES } from "@/src/constants/roles";
-import { PERMISSIONS, type Permission } from "@/src/constants/permissions";
+import { ROLES } from "@/constants/roles";
+import { PERMISSIONS, type Permission } from "@/constants/permissions";
 import type { Profile } from "@/src/features/profile/profile.types";
 
 /**

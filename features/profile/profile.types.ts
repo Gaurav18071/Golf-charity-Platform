@@ -1,4 +1,4 @@
-import { UserRole } from "@/src/types/role";
+import { UserRole } from "@/types/role";
 
 /**
  * VerificationStatus

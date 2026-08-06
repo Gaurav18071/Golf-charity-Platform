@@ -1,6 +1,6 @@
-import { createClient } from "@/src/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { prisma } from "@/src/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import ProfileForm from "@/components/dashboard/profile/ProfileForm";
 
 export const dynamic = "force-dynamic";

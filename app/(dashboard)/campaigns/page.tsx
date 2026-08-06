@@ -1,5 +1,5 @@
-import { createClient } from "@/src/lib/supabase/server";
-import { prisma } from "@/src/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
+import { prisma } from "@/lib/prisma";
 import { CampaignStatus } from "@prisma/client";
 import { redirect } from "next/navigation";
 import Link from "next/link";

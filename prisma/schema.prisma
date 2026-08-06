@@ -13,39 +13,66 @@ datasource db {
 
 enum UserRole {
   ADMIN
-  ORGANIZER
   DONOR
+  PENDING_ORGANIZER
+  ORGANIZER
 }
 
-enum VerificationStatus {
+enum OrganizationVerificationStatus {
+  DRAFT
   PENDING
   UNDER_REVIEW
-  VERIFIED
+  APPROVED
   REJECTED
-  CHANGES_REQUESTED
+}
+
+enum DocumentVerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum OrganizationType {
   NGO
   TRUST
   SOCIETY
-  COMPANY
   FOUNDATION
+  EDUCATIONAL
+  HOSPITAL
+  CORPORATE
+  GOVERNMENT
+  RELIGIOUS
+  INDIVIDUAL
+  OTHER
+}
+
+enum CampaignCategory {
+  EDUCATION
+  HEALTHCARE
+  ENVIRONMENT
+  ANIMAL_WELFARE
+  DISASTER_RELIEF
+  FOOD
+  SPORTS
+  COMMUNITY
+  CHILD_WELFARE
+  ELDERLY_SUPPORT
   OTHER
 }
 
 enum DocumentType {
   REGISTRATION_CERTIFICATE
   PAN_CARD
-  TAX_CERTIFICATE
-  GOVT_REGISTRATION
+  GST_CERTIFICATE
+  TAX_EXEMPTION_CERTIFICATE
+  GOVERNMENT_REGISTRATION
   BANK_STATEMENT
   OTHER
 }
 
 enum CampaignStatus {
   DRAFT
-  UNDER_REVIEW
+  PENDING_APPROVAL
   ACTIVE
   COMPLETED
   CANCELLED
@@ -75,142 +102,247 @@ enum PaymentStatus {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PROFILE
-// One row per user. Created automatically on signup.
-// Role is managed server-side — never trust client input for role changes.
 // ─────────────────────────────────────────────────────────────────────────────
 
 model Profile {
-  id                 String             @id @db.Uuid
-  fullName           String             @map("full_name")
-  email              String             @unique
-  avatarUrl          String?            @map("avatar_url")
-  role               UserRole           @default(DONOR)
-  verificationStatus VerificationStatus @default(PENDING) @map("verification_status")
-  createdAt          DateTime           @default(now()) @map("created_at")
-  updatedAt          DateTime           @updatedAt @map("updated_at")
+  id String @id @db.Uuid
 
+  fullName  String  @map("full_name")
+  email     String  @unique
+  avatarUrl String? @map("avatar_url")
+
+  role UserRole @default(DONOR)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
   organization Organization?
-  campaigns    Campaign[]
-  donations    Donation[]
 
+  campaigns Campaign[]
+
+  donations Donation[]
+
+  @@index([role])
+  @@index([createdAt])
   @@map("profiles")
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ORGANIZATION
-// Created when a PENDING_ORGANIZER fills out their org profile.
-// One-to-one with Profile. Submitted for admin review before campaigns
-// can be created.
 // ─────────────────────────────────────────────────────────────────────────────
 
 model Organization {
-  id        String  @id @default(uuid()) @db.Uuid
+  id String @id @default(uuid()) @db.Uuid
+
   profileId String  @unique @map("profile_id") @db.Uuid
   profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
-  // ── Basic Info ─────────────────────────────────────────────────────────────
+  // Basic Information
+
   name        String
   type        OrganizationType @default(OTHER)
-  description String
-  website     String?
-  email       String
-  phone       String
+  description String           @db.Text
 
-  // ── Address ────────────────────────────────────────────────────────────────
+  website String?
+  email   String  @unique
+  phone   String
+
+  // Address
+
   address    String
   city       String
   state      String
   country    String @default("India")
   postalCode String @map("postal_code")
 
-  // ── Legal Information ──────────────────────────────────────────────────────
-  registrationNo String  @map("registration_no")
-  panNumber      String  @map("pan_number")
-  gstNumber      String? @map("gst_number")
+  // Legal Information
+
+  registrationNo String  @unique @map("registration_no")
+  panNumber      String  @unique @map("pan_number")
+  gstNumber      String? @unique @map("gst_number")
   taxExemptionNo String? @map("tax_exemption_no")
 
-  // ── Bank Details ───────────────────────────────────────────────────────────
+  // Bank Details
+
   accountHolder String @map("account_holder")
   accountNumber String @map("account_number")
   bankName      String @map("bank_name")
   ifscCode      String @map("ifsc_code")
   branchName    String @map("branch_name")
 
-  // ── Branding ───────────────────────────────────────────────────────────────
+  // Branding
+
   logoUrl       String? @map("logo_url")
   coverImageUrl String? @map("cover_image_url")
 
-  // ── Verification State ─────────────────────────────────────────────────────
-  verificationStatus VerificationStatus @default(PENDING) @map("verification_status")
-  submittedAt        DateTime?          @map("submitted_at")
-  reviewedAt         DateTime?          @map("reviewed_at")
-  adminNotes         String?            @map("admin_notes") @db.Text
+  // Verification
+
+  verificationStatus OrganizationVerificationStatus @default(DRAFT) @map("verification_status")
+
+  submittedAt DateTime? @map("submitted_at")
+  reviewedAt  DateTime? @map("reviewed_at")
+
+  adminNotes String? @map("admin_notes") @db.Text
+
+  // Soft Delete
+
+  deletedAt DateTime? @map("deleted_at")
+
+  // Metadata
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  // Relations
+
   documents OrganizationDocument[]
+
   campaigns Campaign[]
 
+  // Indexes
+
+  @@index([profileId])
+  @@index([verificationStatus])
+  @@index([name])
+  @@index([createdAt])
   @@map("organizations")
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ORGANIZATION DOCUMENT
-// Verification documents uploaded by the organizer.
-// File paths point to Supabase Storage (organization-documents bucket).
 // ─────────────────────────────────────────────────────────────────────────────
 
 model OrganizationDocument {
-  id             String       @id @default(uuid()) @db.Uuid
+  id String @id @default(uuid()) @db.Uuid
+
+  // Relations
+
   organizationId String       @map("organization_id") @db.Uuid
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
+  // Document Information
+
   documentType DocumentType @map("document_type")
-  fileName     String       @map("file_name")
-  fileUrl      String       @map("file_url") // Supabase Storage path
-  fileSize     Int          @map("file_size") // bytes
-  mimeType     String       @map("mime_type")
+
+  originalFileName String @map("original_file_name")
+
+  storagePath String @unique @map("storage_path")
+
+  mimeType String @map("mime_type")
+
+  fileSize Int @map("file_size")
+
+  // Verification
+
+  verificationStatus DocumentVerificationStatus @default(PENDING) @map("verification_status")
+
+  reviewedAt DateTime? @map("reviewed_at")
+
+  reviewerNotes String? @map("reviewer_notes") @db.Text
+
+  // Metadata
 
   uploadedAt DateTime @default(now()) @map("uploaded_at")
 
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Indexes
+
   @@index([organizationId])
+  @@index([documentType])
+  @@index([verificationStatus])
+  @@index([uploadedAt])
   @@map("organization_documents")
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CAMPAIGN
-// Created by verified organizers only.
 // ─────────────────────────────────────────────────────────────────────────────
 
 model Campaign {
-  id             String        @id @default(uuid()) @db.Uuid
-  organizerId    String        @map("organizer_id") @db.Uuid
-  organizer      Profile       @relation(fields: [organizerId], references: [id])
-  organizationId String?       @map("organization_id") @db.Uuid
-  organization   Organization? @relation(fields: [organizationId], references: [id])
+  id String @id @default(uuid()) @db.Uuid
 
-  title         String
-  slug          String         @unique
-  description   String
-  story         String?        @db.Text
-  category      String?
-  location      String?
-  coverImageUrl String?        @map("cover_image_url")
-  goalAmount    Decimal        @map("goal_amount") @db.Decimal(12, 2)
-  currentAmount Decimal        @default(0) @map("current_amount") @db.Decimal(12, 2)
-  status        CampaignStatus @default(DRAFT)
-  startDate     DateTime       @map("start_date") @db.Date
-  endDate       DateTime       @map("end_date") @db.Date
-  adminNotes    String?        @map("admin_notes")
+  // Ownership
+
+  organizerId String  @map("organizer_id") @db.Uuid
+  organizer   Profile @relation(fields: [organizerId], references: [id])
+
+  organizationId String       @map("organization_id") @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // Basic Information
+
+  title String
+
+  slug String @unique
+
+  category CampaignCategory
+
+  shortDescription String @map("short_description")
+
+  description String @db.Text
+
+  story String? @db.Text
+
+  // Beneficiary
+
+  beneficiaryName String? @map("beneficiary_name")
+
+  beneficiaryStory String? @map("beneficiary_story") @db.Text
+
+  // Location
+
+  location String?
+
+  // Images
+
+  coverImageUrl String? @map("cover_image_url")
+
+  // Funding
+
+  goalAmount Decimal @map("goal_amount") @db.Decimal(12, 2)
+
+  currentAmount Decimal @default(0) @map("current_amount") @db.Decimal(12, 2)
+
+  // Campaign State
+
+  status CampaignStatus @default(DRAFT)
+
+  featured Boolean @default(false)
+
+  // Timeline
+
+  startDate DateTime @map("start_date") @db.Date
+
+  endDate DateTime @map("end_date") @db.Date
+
+  // Admin Review
+
+  adminNotes String? @map("admin_notes") @db.Text
+
+  // Soft Delete
+
+  deletedAt DateTime? @map("deleted_at")
+
+  // Metadata
 
   createdAt DateTime @default(now()) @map("created_at")
+
   updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
 
   donations Donation[]
 
+  // Indexes
+
   @@index([organizerId])
+  @@index([organizationId])
+  @@index([category])
   @@index([status])
+  @@index([featured])
+  @@index([createdAt])
   @@map("campaigns")
 }
 
@@ -219,27 +351,56 @@ model Campaign {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model Donation {
-  id         String   @id @default(uuid()) @db.Uuid
-  donorId    String   @map("donor_id") @db.Uuid
-  donor      Profile  @relation(fields: [donorId], references: [id])
+  id String @id @default(uuid()) @db.Uuid
+
+  // --------------------------------------------------------------------------
+  // Relations
+  // --------------------------------------------------------------------------
+
+  donorId String  @map("donor_id") @db.Uuid
+  donor   Profile @relation(fields: [donorId], references: [id])
+
   campaignId String   @map("campaign_id") @db.Uuid
-  campaign   Campaign @relation(fields: [campaignId], references: [id])
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 
-  amount      Decimal @db.Decimal(12, 2)
-  currency    String  @default("INR")
+  // --------------------------------------------------------------------------
+  // Donation Details
+  // --------------------------------------------------------------------------
+
+  amount Decimal @db.Decimal(12, 2)
+
+  currency String @default("INR")
+
   isAnonymous Boolean @default(false) @map("is_anonymous")
-  message     String?
 
-  paymentProvider String         @map("payment_provider")
-  transactionId   String?        @map("transaction_id")
-  status          DonationStatus @default(PENDING)
-  donatedAt       DateTime?      @map("donated_at")
-  createdAt       DateTime       @default(now()) @map("created_at")
+  message String? @db.Text
+
+  status DonationStatus @default(PENDING)
+
+  donatedAt DateTime? @map("donated_at")
+
+  // --------------------------------------------------------------------------
+  // Metadata
+  // --------------------------------------------------------------------------
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // --------------------------------------------------------------------------
+  // Relations
+  // --------------------------------------------------------------------------
 
   payment Payment?
 
+  // --------------------------------------------------------------------------
+  // Indexes
+  // --------------------------------------------------------------------------
+
   @@index([donorId])
   @@index([campaignId])
+  @@index([status])
+  @@index([createdAt])
   @@map("donations")
 }
 
@@ -248,29 +409,78 @@ model Donation {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model Payment {
-  id         String   @id @default(uuid()) @db.Uuid
-  donationId String   @unique @map("donation_id") @db.Uuid
-  donation   Donation @relation(fields: [donationId], references: [id])
+  id String @id @default(uuid()) @db.Uuid
 
-  gateway          PaymentGateway @default(MOCK)
-  gatewayOrderId   String?        @map("gateway_order_id")
-  gatewayPaymentId String?        @map("gateway_payment_id")
-  gatewaySignature String?        @map("gateway_signature")
+  // --------------------------------------------------------------------------
+  // Relation
+  // --------------------------------------------------------------------------
 
-  currency  String   @default("INR")
-  amount    Decimal  @db.Decimal(12, 2)
-  fee       Decimal? @default(0) @db.Decimal(12, 2)
-  tax       Decimal? @default(0) @db.Decimal(12, 2)
+  donationId String @unique @map("donation_id") @db.Uuid
+
+  donation Donation @relation(fields: [donationId], references: [id], onDelete: Cascade)
+
+  // --------------------------------------------------------------------------
+  // Gateway Information
+  // --------------------------------------------------------------------------
+
+  gateway PaymentGateway @default(MOCK)
+
+  gatewayOrderId String? @unique @map("gateway_order_id")
+
+  gatewayPaymentId String? @unique @map("gateway_payment_id")
+
+  gatewaySignature String? @map("gateway_signature")
+
+  // --------------------------------------------------------------------------
+  // Financial
+  // --------------------------------------------------------------------------
+
+  currency String @default("INR")
+
+  amount Decimal @db.Decimal(12, 2)
+
+  fee Decimal? @default(0) @db.Decimal(12, 2)
+
+  tax Decimal? @default(0) @db.Decimal(12, 2)
+
   netAmount Decimal? @map("net_amount") @db.Decimal(12, 2)
 
-  status          PaymentStatus @default(PENDING)
-  failureReason   String?       @map("failure_reason")
-  gatewayResponse Json?         @map("gateway_response")
-  processedAt     DateTime?     @map("processed_at")
+  // --------------------------------------------------------------------------
+  // Payment Status
+  // --------------------------------------------------------------------------
+
+  status PaymentStatus @default(PENDING)
+
+  failureReason String? @map("failure_reason") @db.Text
+
+  gatewayResponse Json? @map("gateway_response")
+
+  processedAt DateTime? @map("processed_at")
+
+  // --------------------------------------------------------------------------
+  // Refund Information
+  // --------------------------------------------------------------------------
+
+  refundedAmount Decimal? @default(0) @map("refunded_amount") @db.Decimal(12, 2)
+
+  refundReason String? @map("refund_reason") @db.Text
+
+  refundedAt DateTime? @map("refunded_at")
+
+  // --------------------------------------------------------------------------
+  // Metadata
+  // --------------------------------------------------------------------------
 
   createdAt DateTime @default(now()) @map("created_at")
+
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@index([donationId])
+  // --------------------------------------------------------------------------
+  // Indexes
+  // --------------------------------------------------------------------------
+
+  @@index([status])
+  @@index([gateway])
+  @@index([processedAt])
   @@map("payments")
 }

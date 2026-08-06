@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/src/lib/supabase/server";
-import { prisma } from "@/src/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
+import { prisma } from "@/lib/prisma";
 
 export async function PATCH(request: Request) {
   try {

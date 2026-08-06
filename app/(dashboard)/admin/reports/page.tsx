@@ -1,6 +1,6 @@
-import { createClient } from "@/src/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { prisma } from "@/src/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { BarChart3, TrendingUp, HandCoins, Users } from "lucide-react";
 import { StatsGrid, ChartCard } from "@/components/dashboard/widgets";
 import type { StatItem } from "@/components/dashboard/widgets";

@@ -1,4 +1,4 @@
-import { createClient } from "@/src/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Building2, ShieldCheck } from "lucide-react";
 import OrganizerProfileForm from "@/components/dashboard/organizer/OrganizerProfileForm";
@@ -10,7 +10,7 @@ export default async function OrganizerProfilePage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const profile = await import("@/src/lib/prisma")
+  const profile = await import("@/lib/prisma")
     .then(({ prisma }) =>
       prisma.profile.findUnique({ where: { id: user.id } })
     );

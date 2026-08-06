@@ -1,4 +1,4 @@
-import { ROLES } from "@/src/constants/roles";
+import { ROLES } from "@/constants/roles";
 
 /**
  * UserRole

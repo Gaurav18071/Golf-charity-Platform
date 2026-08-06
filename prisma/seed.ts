@@ -1,21 +1,20 @@
 /**
  * Seed file — creates profiles for existing auth users, then inserts
- * demo campaign data into Supabase.
+ * demo campaign data into the database.
  *
- * Usage (on mobile hotspot so port 5432 is reachable for profiles):
+ * Usage:
  *   npx tsx prisma/seed.ts
  *
  * Re-running is safe — uses upsert throughout.
  */
 
+import { config } from "dotenv";
 import { PrismaClient, CampaignStatus, UserRole, VerificationStatus } from "@prisma/client";
 
-const DATABASE_URL =
-  "postgresql://postgres.gqlmmbdhkkfctyuvlaef:GolfCharity%40123@aws-1-ap-south-1.pooler.supabase.com:6543/postgres?pgbouncer=true&connect_timeout=15";
+// Load environment variables
+config();
 
-const prisma = new PrismaClient({
-  datasources: { db: { url: DATABASE_URL } },
-});
+const prisma = new PrismaClient();
 
 // ── known auth users (from auth.users) ───────────────────────────────────────
 const AUTH_USERS = [

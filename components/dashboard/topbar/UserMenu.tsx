@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import { getCurrentUser } from "@/src/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 import { LogoutConfirmDialog } from "@/components/dashboard/shared/LogoutConfirmDialog";
 
 export function UserMenu() {

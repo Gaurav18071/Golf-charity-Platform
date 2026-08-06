@@ -1,6 +1,6 @@
-import { createClient } from "@/src/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { prisma } from "@/src/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { CheckSquare, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { AdminDataTable } from "@/components/dashboard/admin/AdminDataTable";
 import { StatsGrid } from "@/components/dashboard/widgets";

@@ -1,8 +1,8 @@
-import { createClient } from "@/src/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Building2 } from "lucide-react";
-import { prisma } from "@/src/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { ProgressCard } from "@/components/dashboard/widgets";
 import type { ProgressStep } from "@/components/dashboard/widgets";
 

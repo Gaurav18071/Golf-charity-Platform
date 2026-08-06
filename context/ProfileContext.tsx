@@ -6,8 +6,8 @@ import {
   useMemo,
   type ReactNode,
 } from "react";
-import { useProfile } from "@/src/hooks/useProfile";
-import type { Profile } from "@/src/features/profile/profile.types";
+import { useProfile } from "@/hooks/useProfile";
+import type { Profile } from "@/features/profile/profile.types";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Context shape

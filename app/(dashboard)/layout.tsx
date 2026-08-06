@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { Sidebar, Topbar } from "@/components/dashboard";
 import { SidebarProvider } from "@/components/dashboard/sidebar/SidebarProvider";
 import { MobileDrawer } from "@/components/dashboard/sidebar/MobileDrawer";
-import { ProfileProvider } from "@/src/context/ProfileContext";
+import { ProfileProvider } from "@/context/ProfileContext";
 
 interface DashboardLayoutProps {
   children: ReactNode;

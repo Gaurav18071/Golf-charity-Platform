@@ -1,5 +1,5 @@
 import { Search } from "lucide-react";
-import { prisma } from "@/src/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { CampaignStatus } from "@prisma/client";
 import { CampaignCardWidget } from "@/components/dashboard/widgets";
 import type { CampaignWidgetItem } from "@/components/dashboard/widgets";

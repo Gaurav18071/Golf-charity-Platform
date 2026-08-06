@@ -6,7 +6,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
 } from "lucide-react";
-import { prisma } from "@/src/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { CampaignStatus, DonationStatus } from "@prisma/client";
 import TopCampaignsTable from "@/components/dashboard/analytics/TopCampaignsTable";
 import DonationsByStatusChart from "@/components/dashboard/analytics/DonationsByStatusChart";

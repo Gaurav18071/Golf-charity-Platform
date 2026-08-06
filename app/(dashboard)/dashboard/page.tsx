@@ -1,5 +1,5 @@
-import { createClient } from "@/src/lib/supabase/server";
-import { prisma } from "@/src/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
+import { prisma } from "@/lib/prisma";
 import { DonationStatus, CampaignStatus } from "@prisma/client";
 import { redirect } from "next/navigation";
 
@@ -8,7 +8,7 @@ import { OrganizerDashboard } from "@/components/dashboard/role-views/OrganizerD
 import { PendingOrganizerDashboard } from "@/components/dashboard/role-views/PendingOrganizerDashboard";
 import { AdminDashboard } from "@/components/dashboard/role-views/AdminDashboard";
 import type { RecentDonationItem } from "@/components/dashboard/widgets";
-import type { VerificationStatus } from "@/src/features/profile/profile.types";
+import type { VerificationStatus } from "@/features/profile/profile.types";
 
 // Always server-render — never cache
 export const dynamic = "force-dynamic";
