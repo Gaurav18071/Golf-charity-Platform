@@ -21,7 +21,6 @@ async function main() {
       email: true,
       fullName: true,
       role: true,
-      verificationStatus: true,
       createdAt: true,
     },
     orderBy: { createdAt: "desc" },
@@ -36,7 +35,6 @@ async function main() {
     console.log(`${idx + 1}. ${p.fullName}`);
     console.log(`   Email: ${p.email}`);
     console.log(`   Role: ${p.role}`);
-    console.log(`   Status: ${p.verificationStatus}`);
     console.log(`   ID: ${p.id}`);
     console.log(`   Created: ${p.createdAt.toLocaleString()}`);
     console.log();

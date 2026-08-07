@@ -39,6 +39,15 @@ export default async function DashboardPage() {
   // Role — always trust DB profile as source of truth.
   // user_metadata.role is only used as fallback if profile row doesn't exist yet.
   const role = profile?.role ?? (user.user_metadata?.role as string) ?? "DONOR";
+  
+  // DEBUG: Log role detection
+  console.log("=== DASHBOARD ROLE DEBUG ===");
+  console.log("User ID:", user.id);
+  console.log("User Email:", user.email);
+  console.log("Profile Role:", profile?.role);
+  console.log("User Metadata Role:", user.user_metadata?.role);
+  console.log("Final Role:", role);
+  console.log("============================");
 
   // ── Shared: recent donations for current user ─────────────────────────────
   const sharedDonations = await prisma.donation.findMany({
@@ -55,6 +64,64 @@ export default async function DashboardPage() {
     status: d.status as RecentDonationItem["status"],
     date: formatDate(d.donatedAt ?? d.createdAt),
   }));
+
+  // ── ADMIN view (check first to prevent fallthrough) ──────────────────────
+  if (role === "ADMIN") {
+    const [
+      totalUsers,
+      totalCampaigns,
+      totalDonationCount,
+      totalRevenue,
+      pendingOrganizerRequests,
+      pendingCampaignApprovals,
+      adminRecentDonations,
+    ] = await Promise.all([
+      prisma.profile.count(),
+      prisma.campaign.count(),
+      prisma.donation.count({ where: { status: DonationStatus.COMPLETED } }),
+      prisma.donation.aggregate({
+        where: { status: DonationStatus.COMPLETED },
+        _sum: { amount: true },
+      }),
+      // Pending organizer requests = organizations with PENDING/UNDER_REVIEW status
+      prisma.organization.count({ 
+        where: { 
+          verificationStatus: { in: ["PENDING", "UNDER_REVIEW"] },
+          deletedAt: null,
+        } 
+      }),
+      prisma.campaign.count({ where: { status: CampaignStatus.DRAFT } }),
+      prisma.donation.findMany({
+        where: { status: DonationStatus.COMPLETED },
+        orderBy: { donatedAt: "desc" },
+        take: 5,
+        include: { campaign: { select: { title: true } } },
+      }),
+    ]);
+
+    const adminDonations: RecentDonationItem[] = adminRecentDonations.map((d) => ({
+      id: d.id,
+      campaignTitle: d.campaign.title,
+      amount: Number(d.amount),
+      status: d.status as RecentDonationItem["status"],
+      date: formatDate(d.donatedAt ?? d.createdAt),
+    }));
+
+    return (
+      <AdminDashboard
+        userName={userName}
+        stats={{
+          totalUsers,
+          totalCampaigns,
+          totalDonations: totalDonationCount,
+          totalRevenue: Number(totalRevenue._sum.amount ?? 0),
+          pendingOrganizerRequests,
+          pendingCampaignApprovals,
+        }}
+        recentDonations={adminDonations}
+      />
+    );
+  }
 
   // ── DONOR view ────────────────────────────────────────────────────────────
   if (role === "DONOR") {
@@ -144,54 +211,17 @@ export default async function DashboardPage() {
     );
   }
 
-  // ── ADMIN view ────────────────────────────────────────────────────────────
-  const [
-    totalUsers,
-    totalCampaigns,
-    totalDonationCount,
-    totalRevenue,
-    pendingOrganizerRequests,
-    pendingCampaignApprovals,
-    adminRecentDonations,
-  ] = await Promise.all([
-    prisma.profile.count(),
-    prisma.campaign.count(),
-    prisma.donation.count({ where: { status: DonationStatus.COMPLETED } }),
-    prisma.donation.aggregate({
-      where: { status: DonationStatus.COMPLETED },
-      _sum: { amount: true },
-    }),
-    // Pending organizer requests = profiles with PENDING_ORGANIZER role
-    prisma.profile.count({ where: { role: "PENDING_ORGANIZER" } }),
-    prisma.campaign.count({ where: { status: CampaignStatus.DRAFT } }),
-    prisma.donation.findMany({
-      where: { status: DonationStatus.COMPLETED },
-      orderBy: { donatedAt: "desc" },
-      take: 5,
-      include: { campaign: { select: { title: true } } },
-    }),
-  ]);
-
-  const adminDonations: RecentDonationItem[] = adminRecentDonations.map((d) => ({
-    id: d.id,
-    campaignTitle: d.campaign.title,
-    amount: Number(d.amount),
-    status: d.status as RecentDonationItem["status"],
-    date: formatDate(d.donatedAt ?? d.createdAt),
-  }));
-
+  // ── Fallback to DONOR (should never reach here with proper role assignment) ──
   return (
-    <AdminDashboard
+    <DonorDashboard
       userName={userName}
       stats={{
-        totalUsers,
-        totalCampaigns,
-        totalDonations: totalDonationCount,
-        totalRevenue: Number(totalRevenue._sum.amount ?? 0),
-        pendingOrganizerRequests,
-        pendingCampaignApprovals,
+        totalDonated: 0,
+        campaignsSupported: 0,
+        activeDonations: 0,
+        impactScore: 0,
       }}
-      recentDonations={adminDonations}
+      recentDonations={recentDonations}
     />
   );
 }

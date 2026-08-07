@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { getCurrentProfile } from "@/features/profile/profile.service";
+import { getCurrentProfileAction } from "@/features/profile/actions/profile.actions";
 import type { Profile } from "@/features/profile/profile.types";
 
 /**
@@ -54,7 +54,7 @@ export function useProfile(): UseProfileResult {
       setLoading(true);
       setError(null);
 
-      const data = await getCurrentProfile();
+      const data = await getCurrentProfileAction();
       setProfile(data);
     } catch (err) {
       const message =

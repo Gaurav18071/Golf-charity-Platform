@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import type { Profile, ProfileUpdate } from "@/features/profile/profile.types";
 
@@ -12,6 +12,9 @@ import type { Profile, ProfileUpdate } from "@/features/profile/profile.types";
  * - No role/permission logic here (belongs in features/auth/permissions.ts)
  * - No UI logic here
  * - All functions are pure async — no side effects beyond DB reads/writes
+ * 
+ * NOTE: This service is designed to be called from Server Actions or Server Components.
+ * It uses the server-side Supabase client (from @/lib/supabase/server).
  */
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -23,7 +26,7 @@ import type { Profile, ProfileUpdate } from "@/features/profile/profile.types";
  * Returns null if the user has no profile row yet.
  */
 export async function getCurrentProfile(): Promise<Profile | null> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const {
     data: { user },
@@ -82,7 +85,7 @@ export async function getProfileById(id: string): Promise<Profile | null> {
 export async function updateCurrentProfile(
   update: ProfileUpdate
 ): Promise<Profile> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const {
     data: { user },
