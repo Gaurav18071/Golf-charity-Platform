@@ -47,6 +47,52 @@ export type {
   isErrorResponse,
 } from "./types/organization-response.types";
 
+export type {
+  DocumentWithUrl,
+  UploadProgress,
+  DocumentValidationError,
+  DocumentUploadResponse,
+  DocumentDeleteResponse,
+  DocumentReplaceResponse,
+  DocumentListResponse,
+  DocumentPreviewResponse,
+  DocumentTypeMetadata,
+  DocumentStatistics,
+  FileValidation,
+  DocumentUploadState,
+  DocumentCardData,
+  DocumentFilterOptions,
+  DocumentSortField,
+  DocumentSortOrder,
+  DocumentSortOptions,
+  BulkDocumentOperation,
+  BulkOperationResponse,
+} from "./types/document.types";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SERVICES
+// ─────────────────────────────────────────────────────────────────────────────
+
+export {
+  DocumentService,
+  DocumentServiceError,
+  DocumentServiceErrorType,
+  documentService,
+  type UploadDocumentInput,
+  type UploadDocumentResult,
+  type DeleteDocumentInput,
+  type ReplaceDocumentInput,
+} from "./services/document.service";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// REPOSITORIES
+// ─────────────────────────────────────────────────────────────────────────────
+
+export {
+  OrganizationStorageRepository,
+  organizationStorageRepository,
+} from "./repositories/storage.repository";
+
 // ─────────────────────────────────────────────────────────────────────────────
 // ACTIONS
 // ─────────────────────────────────────────────────────────────────────────────
@@ -66,10 +112,17 @@ export {
 
 export {
   uploadDocumentAction,
-  getOrganizationDocumentsAction,
-  getDocumentByIdAction,
   deleteDocumentAction,
+  replaceDocumentAction,
+  getDocumentsAction,
+  getDocumentPreviewAction,
   reviewDocumentAction,
+  type UploadDocumentActionResponse,
+  type DeleteDocumentActionResponse,
+  type ReplaceDocumentActionResponse,
+  type GetDocumentsActionResponse,
+  type GetDocumentPreviewActionResponse,
+  type ReviewDocumentActionResponse,
 } from "./actions/document.actions";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -150,3 +203,30 @@ export {
   formatFileSize,
   getFileExtension,
 } from "./utils/organization-helpers";
+
+export {
+  DOCUMENT_TYPE_METADATA,
+  ALLOWED_EXTENSIONS,
+  FILE_SIZE_LIMITS,
+  validateFile,
+  validateFiles,
+  isImageFile,
+  isPDFFile,
+  getFileIcon,
+  truncateFileName,
+  formatUploadDate,
+  getDocumentTypeLabel,
+  getDocumentTypeDescription,
+  isDocumentTypeRequired,
+  getAcceptedFormats,
+  getOptionalDocumentTypes,
+  getVerificationStatusColor,
+  getVerificationStatusIcon,
+  getVerificationStatusLabel,
+  createUploadFormData,
+  createReplaceFormData,
+  fileToBase64,
+  canUploadMoreDocuments,
+  type FileValidationError,
+  type FileValidationResult,
+} from "./utils/document-helpers";

@@ -1,95 +1,317 @@
 /**
  * Document Server Actions
  * 
- * Server actions for document upload, retrieval, and deletion.
- * Handles file upload validation and authorization.
+ * Server actions for document upload, retrieval, deletion, and preview.
+ * Bridges client components with document service layer.
  * 
- * @module features/organization/actions
+ * @module features/organization/actions/document.actions
  */
 
 "use server";
 
 import { revalidatePath } from "next/cache";
-import {
-  requireAuth,
-  requireAdmin,
-  requireDocumentOwnership,
-} from "../utils/organization-guards";
+import { createClient } from "@/lib/supabase/server";
+import { documentService, DocumentServiceError, DocumentServiceErrorType } from "../services/document.service";
 import * as documentRepo from "../repositories/document.repository";
-import {
-  documentUploadSchema,
-  documentReviewSchema,
-} from "../schemas/document.schema";
-import type {
-  UploadDocumentResponse,
-  DeleteDocumentResponse,
-  GetDocumentResponse,
-  ListDocumentsResponse,
-  ReviewDocumentResponse,
-} from "../types/organization-response.types";
-import type {
-  DocumentUploadFormData,
-  DocumentReviewFormData,
-} from "../schemas/document.schema";
-import {
-  SUCCESS_MESSAGES,
-  ERROR_MESSAGES,
-} from "../constants/organization.constants";
+import { requireAuth, requireAdmin } from "../utils/organization-guards";
+import { documentReviewSchema } from "../schemas/document.schema";
+import type { DocumentType } from "@prisma/client";
+import type { DocumentReviewFormData } from "../schemas/document.schema";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RESPONSE TYPES
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface UploadDocumentActionResponse {
+  success: boolean;
+  document?: {
+    id: string;
+    documentType: DocumentType;
+    originalFileName: string;
+    fileSize: number;
+    uploadedAt: Date;
+    verificationStatus: string;
+  };
+  message?: string;
+  error?: string;
+}
+
+export interface DeleteDocumentActionResponse {
+  success: boolean;
+  message?: string;
+  error?: string;
+}
+
+export interface ReplaceDocumentActionResponse {
+  success: boolean;
+  document?: {
+    id: string;
+    documentType: DocumentType;
+    originalFileName: string;
+    fileSize: number;
+    uploadedAt: Date;
+    verificationStatus: string;
+  };
+  message?: string;
+  error?: string;
+}
+
+export interface GetDocumentsActionResponse {
+  success: boolean;
+  documents?: Array<{
+    id: string;
+    documentType: DocumentType;
+    originalFileName: string;
+    fileSize: number;
+    mimeType: string;
+    uploadedAt: Date;
+    verificationStatus: string;
+    reviewerNotes: string | null;
+  }>;
+  error?: string;
+}
+
+export interface GetDocumentPreviewActionResponse {
+  success: boolean;
+  signedUrl?: string;
+  expiresIn?: number;
+  error?: string;
+}
+
+export interface ReviewDocumentActionResponse {
+  success: boolean;
+  document?: any;
+  message?: string;
+  error?: string;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // UPLOAD DOCUMENT
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Upload document metadata (file should be uploaded to storage first)
+ * Upload a document file
  * 
- * Authorization: Requires ownership of organization
- * Validation: File size, type, and metadata
+ * This action receives FormData with the file and metadata,
+ * converts it to the format expected by the service, and uploads.
  * 
- * @param documentData - Document metadata after file upload
- * @returns Created document record
+ * Authorization: User must own the organization
+ * Validation: File type, size, and metadata
+ * 
+ * @param formData - FormData containing file and metadata
+ * @returns Upload result
  */
 export async function uploadDocumentAction(
-  documentData: DocumentUploadFormData
-): Promise<UploadDocumentResponse> {
+  formData: FormData
+): Promise<UploadDocumentActionResponse> {
   try {
-    // Authorization
+    // ── Authentication ────────────────────────────────────────────────────────
     const { profile } = await requireAuth();
 
-    // Validation
-    const validated = documentUploadSchema.parse(documentData);
+    // ── Extract form data ─────────────────────────────────────────────────────
+    const file = formData.get("file") as File | null;
+    const organizationId = formData.get("organizationId") as string;
+    const documentType = formData.get("documentType") as DocumentType;
 
-    // Verify user owns the organization
-    const organization = await documentRepo.findDocumentsByOrganizationId(
-      validated.organizationId
-    );
+    // ── Validate input ────────────────────────────────────────────────────────
+    if (!file) {
+      return {
+        success: false,
+        error: "No file provided",
+      };
+    }
 
-    // Business logic: Create document record
-    const document = await documentRepo.createDocument(validated);
+    if (!organizationId) {
+      return {
+        success: false,
+        error: "Organization ID is required",
+      };
+    }
 
-    // Revalidate paths
+    if (!documentType) {
+      return {
+        success: false,
+        error: "Document type is required",
+      };
+    }
+
+    // ── Call service layer ────────────────────────────────────────────────────
+    const result = await documentService.uploadDocument({
+      file,
+      organizationId,
+      documentType,
+      userId: profile.id,
+    });
+
+    // ── Revalidate paths ──────────────────────────────────────────────────────
     revalidatePath("/dashboard/organizer/verification");
+    revalidatePath(`/dashboard/organizer/organization/${organizationId}`);
 
+    // ── Return success response ───────────────────────────────────────────────
     return {
       success: true,
-      data: { document },
-      message: SUCCESS_MESSAGES.DOCUMENT_UPLOADED,
+      document: {
+        id: result.document.id,
+        documentType: result.document.documentType,
+        originalFileName: result.document.originalFileName,
+        fileSize: result.document.fileSize,
+        uploadedAt: result.document.uploadedAt,
+        verificationStatus: result.document.verificationStatus,
+      },
+      message: result.message,
     };
   } catch (error) {
     console.error("[uploadDocumentAction] Error:", error);
 
-    if (error && typeof error === "object" && "errors" in error) {
+    // ── Handle service errors ─────────────────────────────────────────────────
+    if (error instanceof DocumentServiceError) {
       return {
         success: false,
-        error: "Validation failed",
-        details: error.errors as Record<string, string[]>,
+        error: error.message,
       };
     }
 
+    // ── Handle unexpected errors ──────────────────────────────────────────────
     return {
       success: false,
-      error:
-        error instanceof Error ? error.message : "Failed to upload document",
+      error: error instanceof Error ? error.message : "Failed to upload document",
+    };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DELETE DOCUMENT
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Delete a document
+ * 
+ * Deletes both the database record and the file from storage.
+ * 
+ * Authorization: User must own the organization
+ * 
+ * @param documentId - Document UUID
+ * @returns Delete result
+ */
+export async function deleteDocumentAction(
+  documentId: string
+): Promise<DeleteDocumentActionResponse> {
+  try {
+    // ── Authentication ────────────────────────────────────────────────────────
+    const { profile } = await requireAuth();
+
+    // ── Call service layer ────────────────────────────────────────────────────
+    const result = await documentService.deleteDocument({
+      documentId,
+      userId: profile.id,
+    });
+
+    // ── Revalidate paths ──────────────────────────────────────────────────────
+    revalidatePath("/dashboard/organizer/verification");
+
+    // ── Return success response ───────────────────────────────────────────────
+    return {
+      success: true,
+      message: result.message,
+    };
+  } catch (error) {
+    console.error("[deleteDocumentAction] Error:", error);
+
+    // ── Handle service errors ─────────────────────────────────────────────────
+    if (error instanceof DocumentServiceError) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+
+    // ── Handle unexpected errors ──────────────────────────────────────────────
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to delete document",
+    };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// REPLACE DOCUMENT
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Replace an existing document with a new file
+ * 
+ * Uploads new file, updates database, and deletes old file.
+ * Resets verification status to PENDING.
+ * 
+ * Authorization: User must own the organization
+ * 
+ * @param formData - FormData containing new file and document ID
+ * @returns Replace result
+ */
+export async function replaceDocumentAction(
+  formData: FormData
+): Promise<ReplaceDocumentActionResponse> {
+  try {
+    // ── Authentication ────────────────────────────────────────────────────────
+    const { profile } = await requireAuth();
+
+    // ── Extract form data ─────────────────────────────────────────────────────
+    const file = formData.get("file") as File | null;
+    const documentId = formData.get("documentId") as string;
+
+    // ── Validate input ────────────────────────────────────────────────────────
+    if (!file) {
+      return {
+        success: false,
+        error: "No file provided",
+      };
+    }
+
+    if (!documentId) {
+      return {
+        success: false,
+        error: "Document ID is required",
+      };
+    }
+
+    // ── Call service layer ────────────────────────────────────────────────────
+    const result = await documentService.replaceDocument({
+      documentId,
+      newFile: file,
+      userId: profile.id,
+    });
+
+    // ── Revalidate paths ──────────────────────────────────────────────────────
+    revalidatePath("/dashboard/organizer/verification");
+
+    // ── Return success response ───────────────────────────────────────────────
+    return {
+      success: true,
+      document: {
+        id: result.document.id,
+        documentType: result.document.documentType,
+        originalFileName: result.document.originalFileName,
+        fileSize: result.document.fileSize,
+        uploadedAt: result.document.uploadedAt,
+        verificationStatus: result.document.verificationStatus,
+      },
+      message: result.message,
+    };
+  } catch (error) {
+    console.error("[replaceDocumentAction] Error:", error);
+
+    // ── Handle service errors ─────────────────────────────────────────────────
+    if (error instanceof DocumentServiceError) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+
+    // ── Handle unexpected errors ──────────────────────────────────────────────
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to replace document",
     };
   }
 }
@@ -101,133 +323,117 @@ export async function uploadDocumentAction(
 /**
  * Get all documents for an organization
  * 
- * Authorization: Requires ownership of organization or admin role
+ * Authorization: User must own the organization
  * 
  * @param organizationId - Organization UUID
  * @returns List of documents
  */
-export async function getOrganizationDocumentsAction(
+export async function getDocumentsAction(
   organizationId: string
-): Promise<ListDocumentsResponse> {
+): Promise<GetDocumentsActionResponse> {
   try {
-    // Authorization
+    // ── Authentication ────────────────────────────────────────────────────────
     const { profile } = await requireAuth();
 
-    // Get documents
-    const documents = await documentRepo.findDocumentsByOrganizationId(
-      organizationId
+    // ── Call service layer ────────────────────────────────────────────────────
+    const documents = await documentService.getDocuments(
+      organizationId,
+      profile.id
     );
 
+    // ── Return success response ───────────────────────────────────────────────
     return {
       success: true,
-      data: { documents },
+      documents: documents.map((doc) => ({
+        id: doc.id,
+        documentType: doc.documentType,
+        originalFileName: doc.originalFileName,
+        fileSize: doc.fileSize,
+        mimeType: doc.mimeType,
+        uploadedAt: doc.uploadedAt,
+        verificationStatus: doc.verificationStatus,
+        reviewerNotes: doc.reviewerNotes,
+      })),
     };
   } catch (error) {
-    console.error("[getOrganizationDocumentsAction] Error:", error);
+    console.error("[getDocumentsAction] Error:", error);
 
-    return {
-      success: false,
-      error:
-        error instanceof Error ? error.message : "Failed to fetch documents",
-    };
-  }
-}
-
-/**
- * Get document by ID
- * 
- * Authorization: Requires ownership or admin role
- * 
- * @param documentId - Document UUID
- * @returns Document data
- */
-export async function getDocumentByIdAction(
-  documentId: string
-): Promise<GetDocumentResponse> {
-  try {
-    // Authorization
-    const { profile } = await requireAuth();
-
-    // Get document
-    const document = await documentRepo.findDocumentById(documentId);
-
-    if (!document) {
+    // ── Handle service errors ─────────────────────────────────────────────────
+    if (error instanceof DocumentServiceError) {
       return {
         success: false,
-        error: ERROR_MESSAGES.DOCUMENT_NOT_FOUND,
-        code: "NOT_FOUND",
+        error: error.message,
       };
     }
 
-    // Ownership check (will throw if not authorized)
-    await requireDocumentOwnership(documentId, profile.id);
-
-    return {
-      success: true,
-      data: { document },
-    };
-  } catch (error) {
-    console.error("[getDocumentByIdAction] Error:", error);
-
+    // ── Handle unexpected errors ──────────────────────────────────────────────
     return {
       success: false,
-      error:
-        error instanceof Error ? error.message : "Failed to fetch document",
+      error: error instanceof Error ? error.message : "Failed to fetch documents",
     };
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DELETE DOCUMENT
+// GET DOCUMENT PREVIEW
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Delete document
+ * Get signed URL for document preview
  * 
- * Authorization: Requires ownership
- * Note: This only deletes the database record. File cleanup should be handled separately.
+ * Generates a temporary URL (valid for 1 hour) to preview the document.
+ * 
+ * Authorization: User must own the organization
  * 
  * @param documentId - Document UUID
- * @returns Deleted document ID
+ * @returns Signed URL for preview
  */
-export async function deleteDocumentAction(
+export async function getDocumentPreviewAction(
   documentId: string
-): Promise<DeleteDocumentResponse> {
+): Promise<GetDocumentPreviewActionResponse> {
   try {
-    // Authorization
+    // ── Authentication ────────────────────────────────────────────────────────
     const { profile } = await requireAuth();
 
-    // Ownership check
-    await requireDocumentOwnership(documentId, profile.id);
+    // ── Call service layer ────────────────────────────────────────────────────
+    const result = await documentService.getDocumentSignedUrl(
+      documentId,
+      profile.id
+    );
 
-    // Business logic: Delete document
-    await documentRepo.deleteDocument(documentId);
-
-    // Revalidate paths
-    revalidatePath("/dashboard/organizer/verification");
-
+    // ── Return success response ───────────────────────────────────────────────
     return {
       success: true,
-      data: { documentId },
-      message: SUCCESS_MESSAGES.DOCUMENT_DELETED,
+      signedUrl: result.signedUrl,
+      expiresIn: result.expiresIn,
     };
   } catch (error) {
-    console.error("[deleteDocumentAction] Error:", error);
+    console.error("[getDocumentPreviewAction] Error:", error);
 
+    // ── Handle service errors ─────────────────────────────────────────────────
+    if (error instanceof DocumentServiceError) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+
+    // ── Handle unexpected errors ──────────────────────────────────────────────
     return {
       success: false,
-      error:
-        error instanceof Error ? error.message : "Failed to delete document",
+      error: error instanceof Error ? error.message : "Failed to generate preview URL",
     };
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ADMIN DOCUMENT REVIEW
+// ADMIN: REVIEW DOCUMENT
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Review document (Admin only)
+ * Review a document (Admin only)
+ * 
+ * Approve, reject, or request changes for a document.
  * 
  * Authorization: Requires ADMIN role
  * 
@@ -236,15 +442,15 @@ export async function deleteDocumentAction(
  */
 export async function reviewDocumentAction(
   reviewData: DocumentReviewFormData
-): Promise<ReviewDocumentResponse> {
+): Promise<ReviewDocumentActionResponse> {
   try {
-    // Authorization: Admin only
+    // ── Authorization: Admin only ─────────────────────────────────────────────
     await requireAdmin();
 
-    // Validation
+    // ── Validation ────────────────────────────────────────────────────────────
     const validated = documentReviewSchema.parse(reviewData);
 
-    // Get document before review
+    // ── Get document before review ────────────────────────────────────────────
     const docBefore = await documentRepo.findDocumentById(
       validated.documentId
     );
@@ -252,48 +458,48 @@ export async function reviewDocumentAction(
     if (!docBefore) {
       return {
         success: false,
-        error: ERROR_MESSAGES.DOCUMENT_NOT_FOUND,
+        error: "Document not found",
       };
     }
 
     const previousStatus = docBefore.verificationStatus;
 
-    // Business logic: Update verification status
+    // ── Update verification status ────────────────────────────────────────────
     const document = await documentRepo.updateDocumentVerificationStatus(
       validated.documentId,
       validated.verificationStatus,
       validated.reviewerNotes
     );
 
-    // Revalidate paths
-    revalidatePath("/dashboard/admin");
+    // ── Revalidate paths ──────────────────────────────────────────────────────
+    revalidatePath("/admin/organizer-requests");
     revalidatePath("/dashboard/organizer/verification");
 
+    // ── Return success response ───────────────────────────────────────────────
     return {
       success: true,
-      data: {
-        document,
+      document: {
+        ...document,
         previousStatus,
         newStatus: document.verificationStatus,
-        reviewedAt: document.reviewedAt || new Date(),
       },
       message: `Document ${document.verificationStatus.toLowerCase()}`,
     };
   } catch (error) {
     console.error("[reviewDocumentAction] Error:", error);
 
+    // ── Handle validation errors ──────────────────────────────────────────────
     if (error && typeof error === "object" && "errors" in error) {
       return {
         success: false,
         error: "Validation failed",
-        details: error.errors as Record<string, string[]>,
       };
     }
 
+    // ── Handle unexpected errors ──────────────────────────────────────────────
     return {
       success: false,
-      error:
-        error instanceof Error ? error.message : "Failed to review document",
+      error: error instanceof Error ? error.message : "Failed to review document",
     };
   }
 }
