@@ -183,6 +183,42 @@ export {
 } from "./constants/organization.constants";
 
 // ─────────────────────────────────────────────────────────────────────────────
+// COMPONENTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+export {
+  DocumentUploader,
+  type DocumentUploaderProps,
+  DocumentCard,
+  type DocumentCardProps,
+  DocumentList,
+  type DocumentListProps,
+  DocumentPreview,
+  type DocumentPreviewProps,
+  DocumentManager,
+  type DocumentManagerProps,
+} from "./components/documents";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HOOKS
+// ─────────────────────────────────────────────────────────────────────────────
+
+export {
+  useDocumentUpload,
+  type UploadState,
+  type UseDocumentUploadOptions,
+  type UseDocumentUploadReturn,
+} from "./hooks/useDocumentUpload";
+
+export {
+  useDocuments,
+  type Document,
+  type DocumentsState,
+  type UseDocumentsOptions,
+  type UseDocumentsReturn,
+} from "./hooks/useDocuments";
+
+// ─────────────────────────────────────────────────────────────────────────────
 // UTILITIES
 // ─────────────────────────────────────────────────────────────────────────────
 
