@@ -15,6 +15,8 @@ import type {
   CreateOrganizationInput,
   UpdateOrganizationInput,
   OrganizationSummary,
+  OrganizationAdminReviewListItem,
+  OrganizationAdminReviewDetail,
 } from "../types/organization.types";
 import type {
   OrganizationType,
@@ -202,6 +204,141 @@ export async function findOrganizationsPendingReview(): Promise<
     },
     orderBy: { submittedAt: "asc" },
   });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ADMIN REVIEW QUERY OPERATIONS
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Find organizations for the admin review queue.
+ *
+ * Supports status filter, list-level text search, pagination, and ordering.
+ * Repository-only query; no business rule enforcement here.
+ */
+export async function findOrganizationsForAdminReview(options?: {
+  status?: OrganizationVerificationStatus;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+  sortBy?: "createdAt" | "submittedAt" | "reviewedAt" | "name";
+  sortOrder?: "asc" | "desc";
+}): Promise<{
+  organizations: OrganizationAdminReviewListItem[];
+  total: number;
+}> {
+  const {
+    status,
+    search,
+    page = 1,
+    pageSize = 20,
+    sortBy = "submittedAt",
+    sortOrder = "desc",
+  } = options || {};
+
+  const normalizedSearch = search?.trim();
+
+  const where: {
+    deletedAt: null;
+    verificationStatus?: OrganizationVerificationStatus;
+    OR?: Array<
+      | { name: { contains: string; mode: "insensitive" } }
+      | { email: { contains: string; mode: "insensitive" } }
+      | { registrationNo: { contains: string; mode: "insensitive" } }
+      | { profile: { fullName: { contains: string; mode: "insensitive" } } }
+      | { profile: { email: { contains: string; mode: "insensitive" } } }
+    >;
+  } = {
+    deletedAt: null,
+    ...(status && { verificationStatus: status }),
+  };
+
+  if (normalizedSearch) {
+    where.OR = [
+      { name: { contains: normalizedSearch, mode: "insensitive" } },
+      { email: { contains: normalizedSearch, mode: "insensitive" } },
+      { registrationNo: { contains: normalizedSearch, mode: "insensitive" } },
+      { profile: { fullName: { contains: normalizedSearch, mode: "insensitive" } } },
+      { profile: { email: { contains: normalizedSearch, mode: "insensitive" } } },
+    ];
+  }
+
+  const [rows, total] = await Promise.all([
+    prisma.organization.findMany({
+      where,
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        email: true,
+        registrationNo: true,
+        verificationStatus: true,
+        submittedAt: true,
+        reviewedAt: true,
+        adminNotes: true,
+        createdAt: true,
+        documents: {
+          select: {
+            id: true,
+          },
+        },
+        profile: {
+          select: {
+            fullName: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: {
+        [sortBy]: sortOrder,
+      },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+    prisma.organization.count({ where }),
+  ]);
+
+  return {
+    organizations: rows.map((row) => ({
+      ...row,
+      documentsCount: row.documents.length,
+    })),
+    total,
+  };
+}
+
+/**
+ * Find a single organization detail for the admin review page.
+ * Includes profile, uploaded documents, and review metadata.
+ */
+export async function findOrganizationForAdminReview(
+  id: string
+): Promise<OrganizationAdminReviewDetail | null> {
+  const organization = await prisma.organization.findUnique({
+    where: {
+      id,
+      deletedAt: null,
+    },
+    include: {
+      profile: {
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+          role: true,
+        },
+      },
+      documents: {
+        orderBy: { uploadedAt: "desc" },
+      },
+    },
+  });
+
+  if (!organization) {
+    return null;
+  }
+
+  return organization;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

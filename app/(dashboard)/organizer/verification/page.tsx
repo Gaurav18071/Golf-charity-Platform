@@ -1,18 +1,19 @@
-import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Building2 } from "lucide-react";
-import { prisma } from "@/lib/prisma";
 import { ProgressCard } from "@/components/dashboard/widgets";
 import type { ProgressStep } from "@/components/dashboard/widgets";
+import { requireAuth } from "@/features/organization/utils/organization-guards";
+import { getOrganizationByProfileId } from "@/features/organization/services/organization.service";
 
 export const dynamic = "force-dynamic";
 
-function buildSteps(
-  status: "PENDING" | "VERIFIED" | "REJECTED"
-): ProgressStep[] {
-  const isApproved = status === "VERIFIED";
+function buildSteps(status: "PENDING" | "UNDER_REVIEW" | "APPROVED" | "REJECTED" | "DRAFT"):
+  ProgressStep[] {
+  const isApproved = status === "APPROVED";
   const isRejected = status === "REJECTED";
+  const isUnderReview = status === "UNDER_REVIEW";
+  const isPending = status === "PENDING";
 
   return [
     {
@@ -25,7 +26,7 @@ function buildSteps(
       id: "profile",
       title: "Organization Profile Reviewed",
       description: "Our team is reviewing your organization details.",
-      status: isApproved || isRejected ? "completed" : "current",
+      status: isApproved || isRejected || isUnderReview || isPending ? "completed" : "current",
     },
     {
       id: "documents",
@@ -35,7 +36,7 @@ function buildSteps(
     },
     {
       id: "decision",
-      title: isRejected ? "Changes Requested" : "Account Approved",
+      title: isRejected ? "Changes Requested" : isApproved ? "Account Approved" : "Decision Pending",
       description: isApproved
         ? "Congratulations! You can now create and manage campaigns."
         : isRejected
@@ -47,49 +48,43 @@ function buildSteps(
 }
 
 export default async function VerificationStatusPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const { profile } = await requireAuth();
 
-  const profile = await prisma.profile.findUnique({ where: { id: user.id } });
-
-  // Role — always trust DB profile role over metadata for page guards
-  const role = profile?.role ?? "DONOR";
-
-  // ADMIN should never need to verify as an organizer — redirect to admin dashboard
-  if (role === "ADMIN") redirect("/dashboard");
-
-  // Only PENDING_ORGANIZER and ORGANIZER can view this page
-  if (!["PENDING_ORGANIZER", "ORGANIZER"].includes(
-    (user.user_metadata?.role as string) ?? role
-  )) {
+  if (profile.role === "ADMIN") {
     redirect("/dashboard");
   }
 
-  const verificationStatus =
-    (profile?.verificationStatus as "PENDING" | "VERIFIED" | "REJECTED") ??
-    "PENDING";
+  if (!["PENDING_ORGANIZER", "ORGANIZER"].includes(profile.role)) {
+    redirect("/dashboard");
+  }
+
+  const organization = await getOrganizationByProfileId(profile.id, false);
+
+  const verificationStatus = organization?.verificationStatus ?? "DRAFT";
 
   const steps = buildSteps(verificationStatus);
 
   const pct =
-    verificationStatus === "VERIFIED"
+    verificationStatus === "APPROVED"
       ? 100
       : verificationStatus === "REJECTED"
         ? 40
-        : 60;
+        : verificationStatus === "UNDER_REVIEW" || verificationStatus === "PENDING"
+          ? 60
+          : 20;
 
-  const STATUS_META = {
-    PENDING:  { label: "Under Review",       color: "bg-amber-100 text-amber-700" },
-    VERIFIED: { label: "Approved",           color: "bg-emerald-100 text-emerald-700" },
-    REJECTED: { label: "Changes Requested",  color: "bg-red-100 text-red-700" },
+  const STATUS_META: Record<string, { label: string; color: string }> = {
+    DRAFT: { label: "Draft", color: "bg-gray-100 text-gray-700" },
+    PENDING: { label: "Under Review", color: "bg-amber-100 text-amber-700" },
+    UNDER_REVIEW: { label: "Under Review", color: "bg-blue-100 text-blue-700" },
+    APPROVED: { label: "Approved", color: "bg-emerald-100 text-emerald-700" },
+    REJECTED: { label: "Changes Requested", color: "bg-red-100 text-red-700" },
   };
 
-  const meta = STATUS_META[verificationStatus];
+  const meta = STATUS_META[verificationStatus] ?? STATUS_META.DRAFT;
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center gap-4">
         <Link
           href="/organizer/profile"
@@ -109,7 +104,6 @@ export default async function VerificationStatusPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Progress timeline */}
         <div className="lg:col-span-2">
           <ProgressCard
             title="Application Progress"
@@ -119,9 +113,7 @@ export default async function VerificationStatusPage() {
           />
         </div>
 
-        {/* Info sidebar */}
         <div className="space-y-4">
-          {/* What to expect */}
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <h2 className="mb-3 text-sm font-semibold text-slate-900">What happens next?</h2>
             <ul className="space-y-2 text-sm text-slate-600">
@@ -140,7 +132,6 @@ export default async function VerificationStatusPage() {
             </ul>
           </div>
 
-          {/* Actions */}
           {verificationStatus === "REJECTED" && (
             <div className="rounded-2xl border border-red-200 bg-red-50 p-5">
               <h2 className="mb-2 text-sm font-semibold text-red-800">Action Required</h2>
@@ -157,7 +148,7 @@ export default async function VerificationStatusPage() {
             </div>
           )}
 
-          {verificationStatus === "PENDING" && (
+          {verificationStatus === "PENDING" || verificationStatus === "UNDER_REVIEW" ? (
             <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
               <h2 className="mb-2 text-sm font-semibold text-amber-800">While you wait…</h2>
               <p className="mb-4 text-sm text-amber-700">
@@ -171,9 +162,9 @@ export default async function VerificationStatusPage() {
                 Complete Profile
               </Link>
             </div>
-          )}
+          ) : null}
 
-          {verificationStatus === "VERIFIED" && (
+          {verificationStatus === "APPROVED" && (
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
               <h2 className="mb-2 text-sm font-semibold text-emerald-800">You&apos;re all set!</h2>
               <p className="mb-4 text-sm text-emerald-700">

@@ -70,10 +70,10 @@ export const FILE_UPLOAD_RULES = {
     "image/jpeg",
     "image/jpg",
     "image/png",
-  ],
+  ] as string[],
   ALLOWED_EXTENSIONS: [".pdf", ".jpg", ".jpeg", ".png"],
   MAX_FILES_PER_TYPE: 3,
-} as const;
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ORGANIZATION TYPE MAPPINGS

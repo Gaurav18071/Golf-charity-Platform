@@ -19,6 +19,8 @@ import type {
   OrganizationDraftInput,
   OrganizationSummary,
   VerificationReviewInput,
+  OrganizationAdminReviewListItem,
+  OrganizationAdminReviewDetail,
 } from "../types/organization.types";
 import type {
   OrganizationType,
@@ -429,6 +431,36 @@ export async function reviewOrganization(
   }
 
   return updated;
+}
+
+/**
+ * Admin review list with filter/search support.
+ *
+ * Business Rule: This service method is a read-only admin workflow surface.
+ * The repo returns the data shape; the service is responsible for preserving
+ * the review use case boundaries.
+ */
+export async function getOrganizationsForAdminReview(options?: {
+  status?: OrganizationVerificationStatus;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+  sortBy?: "createdAt" | "submittedAt" | "reviewedAt" | "name";
+  sortOrder?: "asc" | "desc";
+}): Promise<{
+  organizations: OrganizationAdminReviewListItem[];
+  total: number;
+}> {
+  return await organizationRepo.findOrganizationsForAdminReview(options);
+}
+
+/**
+ * Fetch one admin verification detail payload.
+ */
+export async function getOrganizationForAdminReview(
+  id: string
+): Promise<OrganizationAdminReviewDetail | null> {
+  return await organizationRepo.findOrganizationForAdminReview(id);
 }
 
 /**

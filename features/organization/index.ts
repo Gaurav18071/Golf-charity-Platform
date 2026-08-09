@@ -106,7 +106,12 @@ export {
   getOrganizationByIdAction,
   submitOrganizationAction,
   deleteOrganizationAction,
-  reviewOrganizationAction,
+  approveOrganizationAction,
+  rejectOrganizationAction,
+  requestChangesOrganizationAction,
+  approveOrganizationFormAction,
+  rejectOrganizationFormAction,
+  requestChangesOrganizationFormAction,
   getOrganizationsPendingReviewAction,
 } from "./actions/organization.actions";
 
@@ -138,6 +143,9 @@ export {
   completeOrganizationSchema,
   partialOrganizationSchema,
   updateOrganizationSchema,
+  approveOrganizationSchema,
+  rejectOrganizationSchema,
+  requestChangesOrganizationSchema,
   verificationReviewSchema,
   type BasicInfoFormData,
   type AddressFormData,
@@ -147,14 +155,15 @@ export {
   type CompleteOrganizationFormData,
   type PartialOrganizationFormData,
   type UpdateOrganizationFormData,
+  type ApproveOrganizationFormData,
+  type RejectOrganizationFormData,
+  type RequestChangesOrganizationFormData,
   type VerificationReviewFormData,
 } from "./schemas/organization.schema";
 
 export {
   documentUploadSchema,
   documentReviewSchema,
-  validateFile,
-  validateFiles,
   type DocumentUploadFormData,
   type DocumentReviewFormData,
 } from "./schemas/document.schema";

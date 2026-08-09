@@ -28,7 +28,7 @@ function getStatusClass(status: string) {
   );
 }
 
-export default async function OrganizerRequestsPage({
+export default async function AdminOrganizationsPage({
   searchParams,
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -52,7 +52,8 @@ export default async function OrganizerRequestsPage({
         : "";
 
   const normalizedStatus =
-    requestedStatus && ["PENDING", "UNDER_REVIEW", "APPROVED", "REJECTED"].includes(requestedStatus)
+    requestedStatus &&
+    ["PENDING", "UNDER_REVIEW", "APPROVED", "REJECTED"].includes(requestedStatus)
       ? requestedStatus
       : undefined;
 

@@ -20,9 +20,7 @@ import { DocumentType, DocumentVerificationStatus } from "@prisma/client";
 export const documentUploadSchema = z.object({
   organizationId: z.string().uuid("Invalid organization ID"),
 
-  documentType: z.nativeEnum(DocumentType, {
-    errorMap: () => ({ message: "Please select a valid document type" }),
-  }),
+  documentType: z.nativeEnum(DocumentType),
 
   originalFileName: z
     .string()
@@ -37,7 +35,10 @@ export const documentUploadSchema = z.object({
   mimeType: z
     .string()
     .refine(
-      (type) => FILE_UPLOAD_RULES.ALLOWED_FILE_TYPES.includes(type),
+      (type) =>
+        (FILE_UPLOAD_RULES.ALLOWED_FILE_TYPES as readonly string[]).includes(
+          type
+        ),
       {
         message: `File type must be one of: ${FILE_UPLOAD_RULES.ALLOWED_FILE_TYPES.join(", ")}`,
       }
@@ -65,11 +66,7 @@ export type DocumentUploadFormData = z.infer<typeof documentUploadSchema>;
 export const documentReviewSchema = z.object({
   documentId: z.string().uuid("Invalid document ID"),
 
-  verificationStatus: z.nativeEnum(DocumentVerificationStatus, {
-    errorMap: () => ({
-      message: "Please select a valid verification status",
-    }),
-  }),
+  verificationStatus: z.nativeEnum(DocumentVerificationStatus),
 
   reviewerNotes: z
     .string()

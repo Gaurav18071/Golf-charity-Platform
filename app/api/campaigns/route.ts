@@ -1,19 +1,21 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { CampaignCategory, CampaignStatus } from "@prisma/client";
 import { z } from "zod";
 
 const schema = z.object({
   title: z.string().min(5),
+  shortDescription: z.string().min(10).max(180),
   description: z.string().min(20),
   category: z.string().min(1),
   goalAmount: z.coerce.number().min(1000),
   coverImageUrl: z.string().url().optional().or(z.literal("")),
-  story: z.string().min(50),
-  location: z.string().min(2),
+  story: z.string().min(50).optional().or(z.literal("")),
+  location: z.string().min(2).optional().or(z.literal("")),
   endDate: z.string().min(1),
-  beneficiaryName: z.string().min(2),
-  beneficiaryDescription: z.string().min(10),
+  beneficiaryName: z.string().min(2).optional().or(z.literal("")),
+  beneficiaryDescription: z.string().min(10).optional().or(z.literal("")),
 });
 
 function toSlug(title: string): string {
@@ -59,16 +61,52 @@ export async function POST(request: Request) {
       );
     }
 
+    const organization = await prisma.organization.findFirst({
+      where: {
+        profileId: user.id,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!organization) {
+      return NextResponse.json(
+        { error: "Organization profile is required to create a campaign" },
+        { status: 403 }
+      );
+    }
+
+    const normalizedCategoryKey = data.category.toUpperCase();
+    const category =
+      CampaignCategory[
+        normalizedCategoryKey as keyof typeof CampaignCategory
+      ];
+
+    if (!category) {
+      return NextResponse.json(
+        { error: "Unsupported campaign category" },
+        { status: 400 }
+      );
+    }
+
     const campaign = await prisma.campaign.create({
       data: {
         organizerId: user.id,
+        organizationId: organization.id,
         title: data.title,
         slug: toSlug(data.title),
+        category,
+        shortDescription: data.shortDescription,
         description: data.description,
+        story: data.story || null,
+        beneficiaryName: data.beneficiaryName || null,
+        beneficiaryStory: data.beneficiaryDescription || null,
+        location: data.location || null,
         coverImageUrl: data.coverImageUrl || null,
         goalAmount: data.goalAmount,
         currentAmount: 0,
-        status: "DRAFT",
+        status: CampaignStatus.DRAFT,
         startDate,
         endDate,
       },

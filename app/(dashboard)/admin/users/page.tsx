@@ -127,10 +127,10 @@ export default async function UsersPage({ searchParams }: PageProps) {
           },
           {
             key: "status",
-            header: "Verification",
+            header: "Access",
             render: (r) => (
-              <span className={`text-xs font-medium ${r.verificationStatus === "VERIFIED" ? "text-emerald-600" : r.verificationStatus === "REJECTED" ? "text-red-600" : "text-amber-600"}`}>
-                {r.verificationStatus}
+              <span className={`text-xs font-medium ${r.role === "ADMIN" ? "text-purple-600" : r.role === "ORGANIZER" ? "text-emerald-600" : "text-slate-600"}`}>
+                {r.role === "PENDING_ORGANIZER" ? "Pending" : r.role === "ORGANIZER" ? "Verified" : r.role === "ADMIN" ? "Admin" : "Donor"}
               </span>
             ),
           },

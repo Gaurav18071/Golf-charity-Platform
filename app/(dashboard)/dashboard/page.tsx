@@ -7,6 +7,7 @@ import { DonorDashboard } from "@/components/dashboard/role-views/DonorDashboard
 import { OrganizerDashboard } from "@/components/dashboard/role-views/OrganizerDashboard";
 import { PendingOrganizerDashboard } from "@/components/dashboard/role-views/PendingOrganizerDashboard";
 import { AdminDashboard } from "@/components/dashboard/role-views/AdminDashboard";
+import { getOrganizationByProfileId } from "@/features/organization/services/organization.service";
 import type { RecentDonationItem } from "@/components/dashboard/widgets";
 
 // Always server-render — never cache
@@ -156,10 +157,12 @@ export default async function DashboardPage() {
 
   // ── PENDING_ORGANIZER view ────────────────────────────────────────────────
   if (role === "PENDING_ORGANIZER") {
+    const organization = await getOrganizationByProfileId(user.id, false);
+
     return (
       <PendingOrganizerDashboard
         userName={userName}
-        verificationStatus="PENDING"
+        verificationStatus={organization?.verificationStatus ?? "DRAFT"}
         profileCompletion={25}
         recentDonations={recentDonations}
       />

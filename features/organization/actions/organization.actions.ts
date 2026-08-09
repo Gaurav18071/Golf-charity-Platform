@@ -22,6 +22,9 @@ import {
   partialOrganizationSchema,
   updateOrganizationSchema,
   verificationReviewSchema,
+  approveOrganizationSchema,
+  rejectOrganizationSchema,
+  requestChangesOrganizationSchema,
 } from "../schemas/organization.schema";
 import type {
   CreateOrganizationResponse,
@@ -37,6 +40,9 @@ import type {
   PartialOrganizationFormData,
   UpdateOrganizationFormData,
   VerificationReviewFormData,
+  ApproveOrganizationFormData,
+  RejectOrganizationFormData,
+  RequestChangesOrganizationFormData,
 } from "../schemas/organization.schema";
 import {
   SUCCESS_MESSAGES,
@@ -374,47 +380,40 @@ export async function deleteOrganizationAction(
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Review organization (Admin only)
- * 
- * Authorization: Requires ADMIN role
- * Business Rule: Updates verification status and changes user role if approved
- * 
- * @param reviewData - Review data with status and notes
- * @returns Updated organization
+ * Approve organization (Admin only)
+ *
+ * Authorization: requires ADMIN role.
+ * Validation: organizationId + optional admin notes.
  */
-export async function reviewOrganizationAction(
-  reviewData: VerificationReviewFormData
+export async function approveOrganizationAction(
+  reviewData: FormData | ApproveOrganizationFormData
 ): Promise<ReviewOrganizationResponse> {
   try {
-    // Authorization: Admin only
     await requireAdmin();
 
-    // Validation
-    const validated = verificationReviewSchema.parse(reviewData);
+    const normalizedReviewData =
+      reviewData instanceof FormData
+        ? {
+            organizationId: reviewData.get("organizationId")?.toString(),
+            adminNotes: reviewData.get("adminNotes")?.toString(),
+          }
+        : reviewData;
 
-    // Get organization before review
-    const orgBefore = await organizationService.getOrganizationByProfileId(
-      validated.organizationId,
-      false
-    );
+    const validated = approveOrganizationSchema.parse(normalizedReviewData);
 
-    if (!orgBefore) {
-      return {
-        success: false,
-        error: ERROR_MESSAGES.NOT_FOUND,
-      };
-    }
+    const organization = await organizationService.reviewOrganization({
+      organizationId: validated.organizationId,
+      verificationStatus: "APPROVED",
+      adminNotes: validated.adminNotes,
+    });
 
-    const previousStatus = orgBefore.verificationStatus;
-
-    // Business logic
-    const organization = await organizationService.reviewOrganization(
-      validated
-    );
-
-    // Revalidate paths
     revalidatePath("/dashboard/admin");
+    revalidatePath("/dashboard/admin/organizations");
+    revalidatePath("/dashboard/admin/organizations/[id]");
     revalidatePath("/dashboard/organizer");
+    revalidatePath("/dashboard/organizer/verification");
+
+    const previousStatus = organization.verificationStatus;
 
     return {
       success: true,
@@ -424,10 +423,10 @@ export async function reviewOrganizationAction(
         newStatus: organization.verificationStatus,
         reviewedAt: organization.reviewedAt || new Date(),
       },
-      message: `Organization ${organization.verificationStatus.toLowerCase()}`,
+      message: "Organization approved",
     };
   } catch (error) {
-    console.error("[reviewOrganizationAction] Error:", error);
+    console.error("[approveOrganizationAction] Error:", error);
 
     if (error && typeof error === "object" && "errors" in error) {
       return {
@@ -442,9 +441,179 @@ export async function reviewOrganizationAction(
       error:
         error instanceof Error
           ? error.message
-          : "Failed to review organization",
+          : "Failed to approve organization",
     };
   }
+}
+
+/**
+ * Reject organization (Admin only)
+ *
+ * Authorization: requires ADMIN role.
+ * Validation: organizationId + rejectionReason + optional admin notes.
+ */
+export async function rejectOrganizationAction(
+  reviewData: FormData | RejectOrganizationFormData
+): Promise<ReviewOrganizationResponse> {
+  try {
+    await requireAdmin();
+
+    const normalizedReviewData =
+      reviewData instanceof FormData
+        ? {
+            organizationId: reviewData.get("organizationId")?.toString(),
+            rejectionReason: reviewData.get("rejectionReason")?.toString(),
+            adminNotes: reviewData.get("adminNotes")?.toString(),
+          }
+        : reviewData;
+
+    const validated = rejectOrganizationSchema.parse(normalizedReviewData);
+
+    const organization = await organizationService.reviewOrganization({
+      organizationId: validated.organizationId,
+      verificationStatus: "REJECTED",
+      adminNotes: validated.rejectionReason,
+    });
+
+    revalidatePath("/dashboard/admin");
+    revalidatePath("/dashboard/admin/organizations");
+    revalidatePath("/dashboard/admin/organizations/[id]");
+    revalidatePath("/dashboard/organizer");
+    revalidatePath("/dashboard/organizer/verification");
+
+    const previousStatus = organization.verificationStatus;
+
+    return {
+      success: true,
+      data: {
+        organization,
+        previousStatus,
+        newStatus: organization.verificationStatus,
+        reviewedAt: organization.reviewedAt || new Date(),
+      },
+      message: "Organization rejected",
+    };
+  } catch (error) {
+    console.error("[rejectOrganizationAction] Error:", error);
+
+    if (error && typeof error === "object" && "errors" in error) {
+      return {
+        success: false,
+        error: "Validation failed",
+        details: error.errors as Record<string, string[]>,
+      };
+    }
+
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to reject organization",
+    };
+  }
+}
+
+/**
+ * Request changes for organization (Admin only)
+ *
+ * Authorization: requires ADMIN role.
+ * Validation: organizationId + changeRequestNotes + optional admin notes.
+ */
+export async function requestChangesOrganizationAction(
+  reviewData: FormData | RequestChangesOrganizationFormData
+): Promise<ReviewOrganizationResponse> {
+  try {
+    await requireAdmin();
+
+    const normalizedReviewData =
+      reviewData instanceof FormData
+        ? {
+            organizationId: reviewData.get("organizationId")?.toString(),
+            changeRequestNotes: reviewData
+              .get("changeRequestNotes")
+              ?.toString(),
+            adminNotes: reviewData.get("adminNotes")?.toString(),
+          }
+        : reviewData;
+
+    const validated = requestChangesOrganizationSchema.parse(
+      normalizedReviewData
+    );
+
+    const organization = await organizationService.reviewOrganization({
+      organizationId: validated.organizationId,
+      verificationStatus: "REJECTED",
+      adminNotes: validated.changeRequestNotes,
+    });
+
+    revalidatePath("/dashboard/admin");
+    revalidatePath("/dashboard/admin/organizations");
+    revalidatePath("/dashboard/admin/organizations/[id]");
+    revalidatePath("/dashboard/organizer");
+    revalidatePath("/dashboard/organizer/verification");
+
+    const previousStatus = organization.verificationStatus;
+
+    return {
+      success: true,
+      data: {
+        organization,
+        previousStatus,
+        newStatus: organization.verificationStatus,
+        reviewedAt: organization.reviewedAt || new Date(),
+      },
+      message: "Change request submitted",
+    };
+  } catch (error) {
+    console.error("[requestChangesOrganizationAction] Error:", error);
+
+    if (error && typeof error === "object" && "errors" in error) {
+      return {
+        success: false,
+        error: "Validation failed",
+        details: error.errors as Record<string, string[]>,
+      };
+    }
+
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to request changes",
+    };
+  }
+}
+
+export async function approveOrganizationFormAction(
+  formData: FormData
+): Promise<void> {
+  await approveOrganizationAction({
+    organizationId: formData.get("organizationId")?.toString() ?? "",
+    adminNotes: formData.get("adminNotes")?.toString() ?? "",
+  });
+}
+
+export async function rejectOrganizationFormAction(
+  formData: FormData
+): Promise<void> {
+  await rejectOrganizationAction({
+    organizationId: formData.get("organizationId")?.toString() ?? "",
+    rejectionReason: formData.get("rejectionReason")?.toString() ?? "",
+    adminNotes: formData.get("adminNotes")?.toString() ?? "",
+  });
+}
+
+export async function requestChangesOrganizationFormAction(
+  formData: FormData
+): Promise<void> {
+  await requestChangesOrganizationAction({
+    organizationId: formData.get("organizationId")?.toString() ?? "",
+    changeRequestNotes:
+      formData.get("changeRequestNotes")?.toString() ?? "",
+    adminNotes: formData.get("adminNotes")?.toString() ?? "",
+  });
 }
 
 /**

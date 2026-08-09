@@ -14,6 +14,7 @@ import type {
   OrganizationVerificationStatus,
   DocumentType,
   DocumentVerificationStatus,
+  UserRole,
 } from "@prisma/client";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -160,6 +161,71 @@ export interface OrganizationSummary {
   verificationStatus: OrganizationVerificationStatus;
   logoUrl: string | null;
   createdAt: Date;
+}
+
+/**
+ * Admin review list row used by the admin organization review dashboard
+ */
+export interface OrganizationAdminReviewListItem {
+  id: string;
+  name: string;
+  type: OrganizationType;
+  email: string;
+  registrationNo: string;
+  verificationStatus: OrganizationVerificationStatus;
+  submittedAt: Date | null;
+  reviewedAt: Date | null;
+  createdAt: Date;
+  adminNotes: string | null;
+  documentsCount: number;
+  profile: {
+    fullName: string;
+    email: string;
+  };
+}
+
+/**
+ * Admin review detail read model for a single organization page
+ */
+export interface OrganizationAdminReviewDetail {
+  id: string;
+  profileId: string;
+  name: string;
+  type: OrganizationType;
+  description: string;
+  website: string | null;
+  email: string;
+  phone: string;
+  address: string;
+  city: string;
+  state: string;
+  country: string;
+  postalCode: string;
+  registrationNo: string;
+  panNumber: string;
+  gstNumber: string | null;
+  taxExemptionNo: string | null;
+  accountHolder: string;
+  accountNumber: string;
+  bankName: string;
+  ifscCode: string;
+  branchName: string;
+  logoUrl: string | null;
+  coverImageUrl: string | null;
+  verificationStatus: OrganizationVerificationStatus;
+  submittedAt: Date | null;
+  reviewedAt: Date | null;
+  adminNotes: string | null;
+  deletedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  documents: OrganizationDocument[];
+  profile: {
+    id: string;
+    fullName: string;
+    email: string;
+    role: UserRole;
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

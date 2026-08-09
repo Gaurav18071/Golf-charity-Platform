@@ -1,6 +1,6 @@
 import { ROLES } from "@/constants/roles";
 import { PERMISSIONS, type Permission } from "@/constants/permissions";
-import type { Profile } from "@/src/features/profile/profile.types";
+import type { Profile } from "@/features/profile/profile.types";
 
 /**
  * ROLE_PERMISSIONS

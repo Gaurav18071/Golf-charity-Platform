@@ -12,14 +12,18 @@ import {
 
 interface PendingOrganizerDashboardProps {
   userName: string;
-  verificationStatus: "PENDING" | "VERIFIED" | "REJECTED";
+  verificationStatus: "DRAFT" | "PENDING" | "UNDER_REVIEW" | "APPROVED" | "REJECTED";
   profileCompletion: number;   // 0–100
   recentDonations: RecentDonationItem[];
 }
 
 function buildVerificationSteps(
-  status: "PENDING" | "VERIFIED" | "REJECTED"
+  status: "DRAFT" | "PENDING" | "UNDER_REVIEW" | "APPROVED" | "REJECTED"
 ): ProgressStep[] {
+  const isApproved = status === "APPROVED";
+  const isRejected = status === "REJECTED";
+  const isUnderReview = status === "UNDER_REVIEW" || status === "PENDING";
+
   return [
     {
       id: "submitted",
@@ -31,21 +35,21 @@ function buildVerificationSteps(
       id: "review",
       title: "Under Review",
       description: "Our team is reviewing your application.",
-      status: status === "PENDING" ? "current" : "completed",
+      status: isUnderReview || isApproved || isRejected ? "completed" : "current",
     },
     {
       id: "decision",
-      title: status === "REJECTED" ? "Changes Requested" : "Approved",
+      title: isRejected ? "Changes Requested" : isApproved ? "Approved" : "Decision Pending",
       description:
-        status === "REJECTED"
+        isRejected
           ? "Please update your organization profile."
-          : status === "VERIFIED"
+          : isApproved
             ? "Your account has been approved."
             : "Awaiting final decision.",
       status:
-        status === "VERIFIED"
+        isApproved
           ? "completed"
-          : status === "REJECTED"
+          : isRejected
             ? "current"
             : "pending",
     },
@@ -100,12 +104,16 @@ export function PendingOrganizerDashboard({
   const statusBadge = (
     <span className={[
       "rounded-full px-3 py-1 text-xs font-semibold",
-      verificationStatus === "PENDING"  ? "bg-amber-100 text-amber-700" :
-      verificationStatus === "VERIFIED" ? "bg-emerald-100 text-emerald-700" :
-                                          "bg-red-100 text-red-700",
+      verificationStatus === "APPROVED" ? "bg-emerald-100 text-emerald-700" :
+      verificationStatus === "REJECTED" ? "bg-red-100 text-red-700" :
+      verificationStatus === "UNDER_REVIEW" ? "bg-blue-100 text-blue-700" :
+      verificationStatus === "PENDING" ? "bg-amber-100 text-amber-700" :
+      "bg-gray-100 text-gray-700",
     ].join(" ")}>
-      {verificationStatus === "PENDING" ? "Under Review" :
-       verificationStatus === "VERIFIED" ? "Approved" : "Changes Requested"}
+      {verificationStatus === "APPROVED" ? "Approved" :
+       verificationStatus === "REJECTED" ? "Changes Requested" :
+       verificationStatus === "UNDER_REVIEW" ? "Under Review" :
+       verificationStatus === "PENDING" ? "Pending Review" : "Draft"}
     </span>
   );
 
@@ -132,8 +140,10 @@ export function PendingOrganizerDashboard({
           description="Track your organizer application progress."
           steps={steps}
           percentage={
-            verificationStatus === "PENDING" ? 60 :
-            verificationStatus === "VERIFIED" ? 100 : 40
+            verificationStatus === "APPROVED" ? 100 :
+            verificationStatus === "REJECTED" ? 40 :
+            verificationStatus === "UNDER_REVIEW" || verificationStatus === "PENDING" ? 60 :
+            20
           }
           badge={statusBadge}
         />

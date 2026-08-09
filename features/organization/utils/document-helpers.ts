@@ -8,8 +8,15 @@
  */
 
 import type { DocumentType } from "@prisma/client";
-import { MAX_FILE_SIZE, ALLOWED_MIME_TYPES } from "@/lib/supabase/storage";
 import { File as FileIcon, FileText, Image, AlertCircle } from "lucide-react";
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const ALLOWED_MIME_TYPES = [
+  "application/pdf",
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+] as const;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONSTANTS

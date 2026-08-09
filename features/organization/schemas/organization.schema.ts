@@ -31,9 +31,7 @@ export const basicInfoSchema = z.object({
     )
     .trim(),
 
-  type: z.nativeEnum(OrganizationType, {
-    errorMap: () => ({ message: "Please select a valid organization type" }),
-  }),
+  type: z.nativeEnum(OrganizationType),
 
   description: z
     .string()
@@ -103,8 +101,8 @@ export const addressSchema = z.object({
     .string()
     .min(2, "Country must be at least 2 characters")
     .max(50, "Country must not exceed 50 characters")
-    .default("India")
-    .trim(),
+    .trim()
+    .default("India"),
 
   postalCode: z
     .string()
@@ -318,6 +316,74 @@ export type UpdateOrganizationFormData = z.infer<
 // ─────────────────────────────────────────────────────────────────────────────
 // VERIFICATION SCHEMAS (ADMIN)
 // ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Admin approve schema.
+ *
+ * Required: organizationId.
+ * Optional: adminNotes.
+ */
+export const approveOrganizationSchema = z.object({
+  organizationId: z.string().uuid("Invalid organization ID"),
+  adminNotes: z
+    .string()
+    .max(1000, "Admin notes must not exceed 1000 characters")
+    .optional()
+    .or(z.literal(""))
+    .transform((val) => (val === "" ? null : val)),
+});
+
+export type ApproveOrganizationFormData = z.infer<
+  typeof approveOrganizationSchema
+>;
+
+/**
+ * Admin reject schema.
+ *
+ * Required: organizationId and rejectionReason.
+ */
+export const rejectOrganizationSchema = z.object({
+  organizationId: z.string().uuid("Invalid organization ID"),
+  rejectionReason: z
+    .string()
+    .min(10, "Rejection reason must be at least 10 characters")
+    .max(2000, "Rejection reason must not exceed 2000 characters")
+    .trim(),
+  adminNotes: z
+    .string()
+    .max(1000, "Admin notes must not exceed 1000 characters")
+    .optional()
+    .or(z.literal(""))
+    .transform((val) => (val === "" ? null : val)),
+});
+
+export type RejectOrganizationFormData = z.infer<
+  typeof rejectOrganizationSchema
+>;
+
+/**
+ * Admin request-changes schema.
+ *
+ * Required: organizationId and changeRequestNotes.
+ */
+export const requestChangesOrganizationSchema = z.object({
+  organizationId: z.string().uuid("Invalid organization ID"),
+  changeRequestNotes: z
+    .string()
+    .min(10, "Change request notes must be at least 10 characters")
+    .max(2000, "Change request notes must not exceed 2000 characters")
+    .trim(),
+  adminNotes: z
+    .string()
+    .max(1000, "Admin notes must not exceed 1000 characters")
+    .optional()
+    .or(z.literal(""))
+    .transform((val) => (val === "" ? null : val)),
+});
+
+export type RequestChangesOrganizationFormData = z.infer<
+  typeof requestChangesOrganizationSchema
+>;
 
 /**
  * Organization verification review schema
