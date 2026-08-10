@@ -52,11 +52,12 @@ export default async function OrganizerRequestsPage({
         : "";
 
   const normalizedStatus =
-    requestedStatus && ["PENDING", "UNDER_REVIEW", "APPROVED", "REJECTED"].includes(requestedStatus)
+    requestedStatus &&
+    ["DRAFT", "PENDING", "UNDER_REVIEW", "APPROVED", "REJECTED"].includes(requestedStatus)
       ? requestedStatus
       : undefined;
 
-  const [reviewRows, pendingReview, rejectedCount, approvedCount] = await Promise.all([
+  const [reviewRows, pendingReview, draftCount, rejectedCount, approvedCount] = await Promise.all([
     getOrganizationsForAdminReview({
       status: normalizedStatus as any,
       search: query || undefined,
@@ -66,11 +67,19 @@ export default async function OrganizerRequestsPage({
       sortOrder: "desc",
     }),
     getOrganizationsPendingReview(),
+    getOrganizationsForAdminReview({ status: "DRAFT" }),
     getOrganizationsForAdminReview({ status: "REJECTED" }),
     getOrganizationsForAdminReview({ status: "APPROVED" }),
   ]);
 
   const stats: StatItem[] = [
+    {
+      id: "draft",
+      title: "Drafts (In Setup)",
+      value: draftCount.total,
+      icon: <ClipboardList className="h-6 w-6" />,
+      variant: "slate",
+    },
     {
       id: "pending",
       title: "Pending Review",
@@ -114,7 +123,8 @@ export default async function OrganizerRequestsPage({
             className="rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-500"
           >
             <option value="">All statuses</option>
-            <option value="PENDING">Pending</option>
+            <option value="DRAFT">Draft (Unsubmitted)</option>
+            <option value="PENDING">Pending Review</option>
             <option value="UNDER_REVIEW">Under Review</option>
             <option value="APPROVED">Approved</option>
             <option value="REJECTED">Rejected</option>
@@ -125,7 +135,7 @@ export default async function OrganizerRequestsPage({
         </form>
       </div>
 
-      <StatsGrid stats={stats} cols={3} />
+      <StatsGrid stats={stats} cols={4} />
 
       <AdminDataTable
         rows={reviewRows.organizations}

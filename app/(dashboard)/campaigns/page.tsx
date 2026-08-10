@@ -57,7 +57,11 @@ export default async function MyCampaignsPage({ searchParams }: PageProps) {
       ? (status as CampaignStatus)
       : undefined;
 
-  const [campaigns, summary] = await Promise.all([
+  const [organization, campaigns, summary] = await Promise.all([
+    prisma.organization.findUnique({
+      where: { profileId: user.id },
+      select: { verificationStatus: true, name: true },
+    }),
     prisma.campaign.findMany({
       where: {
         organizerId: user.id,
@@ -165,19 +169,35 @@ export default async function MyCampaignsPage({ searchParams }: PageProps) {
 
       {/* Campaigns table */}
       {campaigns.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white py-16 text-center">
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white py-16 text-center px-4">
           <FolderKanban className="mb-4 h-10 w-10 text-slate-300" />
           <h3 className="text-base font-semibold text-slate-900">No campaigns yet</h3>
-          <p className="mt-2 text-sm text-slate-500">
-            Create your first campaign to start raising funds.
-          </p>
-          <Link
-            href="/campaigns/new"
-            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
-          >
-            <PlusCircle className="h-4 w-4" />
-            Create Campaign
-          </Link>
+          {organization?.verificationStatus === "APPROVED" ? (
+            <>
+              <p className="mt-2 text-sm text-slate-500 max-w-md">
+                Your organization is verified! You can now create your first campaign to start raising funds.
+              </p>
+              <Link
+                href="/campaigns/new"
+                className="mt-6 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
+              >
+                <PlusCircle className="h-4 w-4" />
+                Create Campaign
+              </Link>
+            </>
+          ) : (
+            <>
+              <p className="mt-2 text-sm text-slate-500 max-w-md">
+                If your organization is verified, you can create your first campaign.
+              </p>
+              <Link
+                href="/organizer/verification"
+                className="mt-6 inline-flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-5 py-2.5 text-sm font-semibold text-amber-800 transition hover:bg-amber-100"
+              >
+                View Verification Status
+              </Link>
+            </>
+          )}
         </div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">

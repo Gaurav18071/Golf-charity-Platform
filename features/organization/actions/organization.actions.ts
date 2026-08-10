@@ -10,6 +10,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import {
   requireAuth,
   requireOrganizerOrPending,
@@ -49,6 +50,36 @@ import {
   ERROR_MESSAGES,
 } from "../constants/organization.constants";
 
+import { ZodError } from "zod";
+
+function formatZodErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof ZodError) {
+    return error.issues.map((i) => i.message).join(". ");
+  }
+  if (error && typeof error === "object") {
+    if ("issues" in error && Array.isArray((error as any).issues)) {
+      return (error as any).issues.map((i: any) => i.message).join(". ");
+    }
+    if ("errors" in error && Array.isArray((error as any).errors)) {
+      return (error as any).errors.map((e: any) => e.message || String(e)).join(". ");
+    }
+  }
+  if (error instanceof Error) {
+    if (error.message.trim().startsWith("[")) {
+      try {
+        const parsed = JSON.parse(error.message);
+        if (Array.isArray(parsed)) {
+          return parsed.map((item: any) => item.message || String(item)).join(". ");
+        }
+      } catch {
+        // ignore JSON parse error
+      }
+    }
+    return error.message;
+  }
+  return fallback;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // CREATE & UPDATE ORGANIZATION
 // ─────────────────────────────────────────────────────────────────────────────
@@ -63,7 +94,7 @@ import {
  * @returns Created organization
  */
 export async function createOrganizationDraftAction(
-  formData: PartialOrganizationFormData
+  formData: Partial<Omit<PartialOrganizationFormData, "profileId">> & { profileId?: string }
 ): Promise<CreateOrganizationResponse> {
   try {
     // Authorization
@@ -81,8 +112,9 @@ export async function createOrganizationDraftAction(
     );
 
     // Revalidate paths
-    revalidatePath("/dashboard/organizer");
-    revalidatePath("/dashboard/organizer/verification");
+    revalidatePath("/organizer/organization", "page");
+    revalidatePath("/organizer/verification", "page");
+    revalidatePath("/dashboard", "page");
 
     return {
       success: true,
@@ -92,21 +124,9 @@ export async function createOrganizationDraftAction(
   } catch (error) {
     console.error("[createOrganizationDraftAction] Error:", error);
 
-    // Handle Zod validation errors
-    if (error && typeof error === "object" && "errors" in error) {
-      return {
-        success: false,
-        error: "Validation failed",
-        details: error.errors as Record<string, string[]>,
-      };
-    }
-
     return {
       success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Failed to create organization draft",
+      error: formatZodErrorMessage(error, "Failed to create organization draft"),
     };
   }
 }
@@ -142,8 +162,9 @@ export async function updateOrganizationAction(
     );
 
     // Revalidate paths
-    revalidatePath("/dashboard/organizer");
-    revalidatePath("/dashboard/organizer/verification");
+    revalidatePath("/organizer/organization", "page");
+    revalidatePath("/organizer/verification", "page");
+    revalidatePath("/dashboard", "page");
 
     return {
       success: true,
@@ -153,20 +174,9 @@ export async function updateOrganizationAction(
   } catch (error) {
     console.error("[updateOrganizationAction] Error:", error);
 
-    if (error && typeof error === "object" && "errors" in error) {
-      return {
-        success: false,
-        error: "Validation failed",
-        details: error.errors as Record<string, string[]>,
-      };
-    }
-
     return {
       success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Failed to update organization",
+      error: formatZodErrorMessage(error, "Failed to update organization"),
     };
   }
 }
@@ -302,9 +312,10 @@ export async function submitOrganizationAction(
       );
 
     // Revalidate paths
-    revalidatePath("/dashboard/organizer");
-    revalidatePath("/dashboard/organizer/verification");
-    revalidatePath("/dashboard/admin");
+    revalidatePath("/organizer/organization", "page");
+    revalidatePath("/organizer/verification", "page");
+    revalidatePath("/admin/organizations", "page");
+    revalidatePath("/dashboard", "page");
 
     return {
       success: true,
@@ -354,8 +365,9 @@ export async function deleteOrganizationAction(
     await organizationService.deleteOrganization(organizationId, profile.id);
 
     // Revalidate paths
-    revalidatePath("/dashboard/organizer");
-    revalidatePath("/dashboard/organizer/verification");
+    revalidatePath("/organizer/organization", "page");
+    revalidatePath("/organizer/verification", "page");
+    revalidatePath("/dashboard", "page");
 
     return {
       success: true,
@@ -407,11 +419,10 @@ export async function approveOrganizationAction(
       adminNotes: validated.adminNotes,
     });
 
-    revalidatePath("/dashboard/admin");
-    revalidatePath("/dashboard/admin/organizations");
-    revalidatePath("/dashboard/admin/organizations/[id]");
-    revalidatePath("/dashboard/organizer");
-    revalidatePath("/dashboard/organizer/verification");
+    revalidatePath("/admin/organizations", "page");
+    revalidatePath("/admin/organizations/[id]", "page");
+    revalidatePath("/organizer/verification", "page");
+    revalidatePath("/dashboard", "page");
 
     const previousStatus = organization.verificationStatus;
 
@@ -475,11 +486,10 @@ export async function rejectOrganizationAction(
       adminNotes: validated.rejectionReason,
     });
 
-    revalidatePath("/dashboard/admin");
-    revalidatePath("/dashboard/admin/organizations");
-    revalidatePath("/dashboard/admin/organizations/[id]");
-    revalidatePath("/dashboard/organizer");
-    revalidatePath("/dashboard/organizer/verification");
+    revalidatePath("/admin/organizations", "page");
+    revalidatePath("/admin/organizations/[id]", "page");
+    revalidatePath("/organizer/verification", "page");
+    revalidatePath("/dashboard", "page");
 
     const previousStatus = organization.verificationStatus;
 
@@ -547,11 +557,10 @@ export async function requestChangesOrganizationAction(
       adminNotes: validated.changeRequestNotes,
     });
 
-    revalidatePath("/dashboard/admin");
-    revalidatePath("/dashboard/admin/organizations");
-    revalidatePath("/dashboard/admin/organizations/[id]");
-    revalidatePath("/dashboard/organizer");
-    revalidatePath("/dashboard/organizer/verification");
+    revalidatePath("/admin/organizations", "page");
+    revalidatePath("/admin/organizations/[id]", "page");
+    revalidatePath("/organizer/verification", "page");
+    revalidatePath("/dashboard", "page");
 
     const previousStatus = organization.verificationStatus;
 
@@ -589,31 +598,38 @@ export async function requestChangesOrganizationAction(
 export async function approveOrganizationFormAction(
   formData: FormData
 ): Promise<void> {
+  const organizationId = formData.get("organizationId")?.toString() ?? "";
   await approveOrganizationAction({
-    organizationId: formData.get("organizationId")?.toString() ?? "",
+    organizationId,
     adminNotes: formData.get("adminNotes")?.toString() ?? "",
   });
+  // Redirect back to the organization page so admin sees updated status
+  redirect(`/admin/organizations/${organizationId}`);
 }
 
 export async function rejectOrganizationFormAction(
   formData: FormData
 ): Promise<void> {
+  const organizationId = formData.get("organizationId")?.toString() ?? "";
   await rejectOrganizationAction({
-    organizationId: formData.get("organizationId")?.toString() ?? "",
+    organizationId,
     rejectionReason: formData.get("rejectionReason")?.toString() ?? "",
     adminNotes: formData.get("adminNotes")?.toString() ?? "",
   });
+  redirect(`/admin/organizations/${organizationId}`);
 }
 
 export async function requestChangesOrganizationFormAction(
   formData: FormData
 ): Promise<void> {
+  const organizationId = formData.get("organizationId")?.toString() ?? "";
   await requestChangesOrganizationAction({
-    organizationId: formData.get("organizationId")?.toString() ?? "",
+    organizationId,
     changeRequestNotes:
       formData.get("changeRequestNotes")?.toString() ?? "",
     adminNotes: formData.get("adminNotes")?.toString() ?? "",
   });
+  redirect(`/admin/organizations/${organizationId}`);
 }
 
 /**

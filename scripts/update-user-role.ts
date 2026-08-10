@@ -5,7 +5,7 @@
  *   npx tsx scripts/update-user-role.ts <user-email> ORGANIZER
  */
 
-import { PrismaClient, UserRole, VerificationStatus } from "@prisma/client";
+import { PrismaClient, UserRole } from "@prisma/client";
 
 const DATABASE_URL =
   "postgresql://postgres.gqlmmbdhkkfctyuvlaef:GolfCharity%40123@aws-1-ap-south-1.pooler.supabase.com:6543/postgres?pgbouncer=true&connect_timeout=15";
@@ -26,7 +26,6 @@ async function main() {
 
   console.log(`Looking for user with email: ${email}...`);
 
-  // First, we need to find the user ID from Supabase auth
   // Since we can't query auth.users directly via Prisma, we'll update by profile email
   const profile = await prisma.profile.findFirst({
     where: { email: email },
@@ -48,7 +47,6 @@ async function main() {
     where: { id: profile.id },
     data: {
       role: role,
-      verificationStatus: role === UserRole.ORGANIZER ? VerificationStatus.VERIFIED : profile.verificationStatus,
     },
   });
 

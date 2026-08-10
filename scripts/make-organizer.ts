@@ -65,7 +65,6 @@ async function main() {
     where: { id: profile.id },
     data: {
       role: UserRole.ORGANIZER,
-      verificationStatus: VerificationStatus.VERIFIED,
     },
   });
 

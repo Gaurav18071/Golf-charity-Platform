@@ -9,7 +9,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import type { DocumentType } from "@prisma/client";
 import {
   getDocumentsAction,
@@ -127,6 +127,12 @@ export function useDocuments(
 ): UseDocumentsReturn {
   const { organizationId, autoFetch = true, onLoad, onDelete } = options;
 
+  // Keep callbacks stable via refs to avoid stale closures / infinite loops
+  const onLoadRef = useRef(onLoad);
+  const onDeleteRef = useRef(onDelete);
+  useEffect(() => { onLoadRef.current = onLoad; }, [onLoad]);
+  useEffect(() => { onDeleteRef.current = onDelete; }, [onDelete]);
+
   // ── State ──────────────────────────────────────────────────────────────────
   const [state, setState] = useState<DocumentsState>({
     documents: [],
@@ -159,7 +165,7 @@ export function useDocuments(
           loading: false,
         }));
 
-        onLoad?.(documents);
+        onLoadRef.current?.(documents);
       } else {
         setState((prev) => ({
           ...prev,
@@ -174,7 +180,7 @@ export function useDocuments(
         error: error instanceof Error ? error.message : "Unexpected error",
       }));
     }
-  }, [organizationId, onLoad]);
+  }, [organizationId]);
 
   // ── Refresh Documents ──────────────────────────────────────────────────────
   const refresh = useCallback(async () => {
@@ -201,7 +207,7 @@ export function useDocuments(
             deleting: { ...prev.deleting, [documentId]: false },
           }));
 
-          onDelete?.(documentId);
+          onDeleteRef.current?.(documentId);
           return true;
         } else {
           setState((prev) => ({
@@ -220,7 +226,7 @@ export function useDocuments(
         return false;
       }
     },
-    [onDelete]
+    []
   );
 
   // ── Get Preview URL ────────────────────────────────────────────────────────

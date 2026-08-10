@@ -203,10 +203,11 @@ export async function updateOrganizationData(
     throw new Error(ERROR_MESSAGES.UNAUTHORIZED);
   }
 
-  // Business Rule: Can only modify DRAFT or REJECTED organizations
+  // Business Rule: Can modify DRAFT, REJECTED, or APPROVED organizations (PENDING and UNDER_REVIEW are locked)
   const modifiableStatuses: OrganizationVerificationStatus[] = [
     "DRAFT",
     "REJECTED",
+    "APPROVED",
   ];
   if (!modifiableStatuses.includes(existing.verificationStatus)) {
     throw new Error(ERROR_MESSAGES.CANNOT_MODIFY);

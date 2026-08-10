@@ -254,8 +254,13 @@ export interface CreateDocumentInput {
  */
 export interface UpdateDocumentInput {
   id: string;
+  originalFileName?: string;
+  storagePath?: string;
+  mimeType?: string;
+  fileSize?: number;
   verificationStatus?: DocumentVerificationStatus;
   reviewerNotes?: string | null;
+  reviewedAt?: Date | null;
 }
 
 /**

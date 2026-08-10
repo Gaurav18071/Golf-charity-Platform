@@ -8,6 +8,7 @@ import { OrganizerDashboard } from "@/components/dashboard/role-views/OrganizerD
 import { PendingOrganizerDashboard } from "@/components/dashboard/role-views/PendingOrganizerDashboard";
 import { AdminDashboard } from "@/components/dashboard/role-views/AdminDashboard";
 import { getOrganizationByProfileId } from "@/features/organization/services/organization.service";
+import { calculateCompletionPercentage } from "@/features/organization/utils/organization-helpers";
 import type { RecentDonationItem } from "@/components/dashboard/widgets";
 
 // Always server-render — never cache
@@ -171,16 +172,33 @@ export default async function DashboardPage() {
 
   // ── ORGANIZER view ────────────────────────────────────────────────────────
   if (role === "ORGANIZER") {
-    const [totalCampaigns, activeCampaigns, totalRaised] = await Promise.all([
-      prisma.campaign.count({ where: { organizerId: user.id } }),
-      prisma.campaign.count({
-        where: { organizerId: user.id, status: CampaignStatus.ACTIVE },
-      }),
-      prisma.campaign.aggregate({
-        where: { organizerId: user.id },
-        _sum: { currentAmount: true },
-      }),
-    ]);
+    const [organization, totalCampaigns, activeCampaigns, totalRaised, totalDonationsCount] =
+      await Promise.all([
+        getOrganizationByProfileId(user.id, true),
+        prisma.campaign.count({ where: { organizerId: user.id } }),
+        prisma.campaign.count({
+          where: { organizerId: user.id, status: CampaignStatus.ACTIVE },
+        }),
+        prisma.campaign.aggregate({
+          where: { organizerId: user.id },
+          _sum: { currentAmount: true },
+        }),
+        prisma.donation.count({
+          where: {
+            campaign: { organizerId: user.id },
+            status: DonationStatus.COMPLETED,
+          },
+        }),
+      ]);
+
+    const docCount =
+      organization && "documents" in organization && Array.isArray(organization.documents)
+        ? organization.documents.length
+        : 0;
+
+    const completionPercentage = organization
+      ? calculateCompletionPercentage(organization, docCount)
+      : 100;
 
     const orgDonations = await prisma.donation.findMany({
       where: {
@@ -203,11 +221,24 @@ export default async function DashboardPage() {
     return (
       <OrganizerDashboard
         userName={userName}
+        organization={
+          organization
+            ? {
+                id: organization.id,
+                name: organization.name,
+                verificationStatus: organization.verificationStatus,
+                submittedAt: organization.submittedAt,
+                reviewedAt: organization.reviewedAt,
+                adminNotes: organization.adminNotes,
+              }
+            : null
+        }
+        completionPercentage={completionPercentage}
         stats={{
           totalCampaigns,
           activeCampaigns,
           totalRaised: Number(totalRaised._sum.currentAmount ?? 0),
-          pendingWithdrawals: 0,
+          totalDonations: totalDonationsCount,
         }}
         recentDonations={orgRecentDonations}
       />

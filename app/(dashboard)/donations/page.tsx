@@ -54,19 +54,38 @@ export default async function MyDonationsPage({ searchParams }: PageProps) {
       ? (status as DonationStatus)
       : undefined;
 
-  const [donations, summary] = await Promise.all([
-    prisma.donation.findMany({
-      where: {
+  const profile = await prisma.profile.findUnique({
+    where: { id: user.id },
+    select: { role: true },
+  });
+
+  const isOrganizerRole =
+    profile?.role === "ORGANIZER" || profile?.role === "PENDING_ORGANIZER";
+
+  const donationWhere = isOrganizerRole
+    ? {
+        campaign: { organizerId: user.id },
+        ...(statusFilter ? { status: statusFilter } : {}),
+      }
+    : {
         donorId: user.id,
         ...(statusFilter ? { status: statusFilter } : {}),
-      },
+      };
+
+  const summaryWhere = isOrganizerRole
+    ? { campaign: { organizerId: user.id } }
+    : { donorId: user.id };
+
+  const [donations, summary] = await Promise.all([
+    prisma.donation.findMany({
+      where: donationWhere,
       orderBy: { createdAt: "desc" },
       take: 50,
       include: { campaign: { select: { title: true, slug: true } } },
     }),
     prisma.donation.groupBy({
       by: ["status"],
-      where: { donorId: user.id },
+      where: summaryWhere,
       _count: { id: true },
       _sum: { amount: true },
     }),

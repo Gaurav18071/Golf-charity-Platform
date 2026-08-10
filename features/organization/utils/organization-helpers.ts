@@ -208,7 +208,7 @@ export function getPreviousStep(currentStep: WizardStep): WizardStep | null {
 export function canEditOrganization(
   status: OrganizationVerificationStatus
 ): boolean {
-  return status === "DRAFT" || status === "REJECTED";
+  return status === "DRAFT" || status === "REJECTED" || status === "APPROVED";
 }
 
 /**

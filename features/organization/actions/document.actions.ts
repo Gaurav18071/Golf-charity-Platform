@@ -144,8 +144,8 @@ export async function uploadDocumentAction(
     });
 
     // ── Revalidate paths ──────────────────────────────────────────────────────
-    revalidatePath("/dashboard/organizer/verification");
-    revalidatePath(`/dashboard/organizer/organization/${organizationId}`);
+    revalidatePath("/organizer/verification", "page");
+    revalidatePath(`/organizer/documents`, "page");
 
     // ── Return success response ───────────────────────────────────────────────
     return {
@@ -207,7 +207,8 @@ export async function deleteDocumentAction(
     });
 
     // ── Revalidate paths ──────────────────────────────────────────────────────
-    revalidatePath("/dashboard/organizer/verification");
+    revalidatePath("/organizer/verification", "page");
+    revalidatePath("/organizer/documents", "page");
 
     // ── Return success response ───────────────────────────────────────────────
     return {
@@ -282,7 +283,8 @@ export async function replaceDocumentAction(
     });
 
     // ── Revalidate paths ──────────────────────────────────────────────────────
-    revalidatePath("/dashboard/organizer/verification");
+    revalidatePath("/organizer/verification", "page");
+    revalidatePath("/organizer/documents", "page");
 
     // ── Return success response ───────────────────────────────────────────────
     return {

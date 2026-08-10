@@ -1,25 +1,33 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { Building2, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import OrganizerProfileForm from "@/components/dashboard/organizer/OrganizerProfileForm";
+import { getOrganizationByProfileId } from "@/features/organization/services/organization.service";
+import { OrganizationDetailsView } from "@/components/dashboard/organizer/OrganizationDetailsView";
 
 export const dynamic = "force-dynamic";
 
 export default async function OrganizerProfilePage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const profile = await import("@/lib/prisma")
-    .then(({ prisma }) =>
-      prisma.profile.findUnique({ where: { id: user.id } })
-    );
+  const profile = await import("@/lib/prisma").then(({ prisma }) =>
+    prisma.profile.findUnique({ where: { id: user.id } })
+  );
 
   const role = profile?.role ?? (user.user_metadata?.role as string) ?? "DONOR";
 
-  // Only organizer-related roles can access this page
   if (!["ORGANIZER", "PENDING_ORGANIZER", "ADMIN"].includes(role)) {
     redirect("/dashboard");
+  }
+
+  const organization = await getOrganizationByProfileId(user.id, true);
+
+  if (organization) {
+    return <OrganizationDetailsView organization={organization as any} />;
   }
 
   return (
