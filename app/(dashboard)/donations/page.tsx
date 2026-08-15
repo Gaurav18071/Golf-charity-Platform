@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server";
-import { prisma } from "@/lib/prisma";
 import { DonationStatus } from "@prisma/client";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -8,11 +7,12 @@ import {
   CheckCircle2,
   Clock,
   AlertCircle,
-  RefreshCw,
   Receipt,
+  Building2,
 } from "lucide-react";
 import { StatsGrid } from "@/components/dashboard/widgets";
 import type { StatItem } from "@/components/dashboard/widgets";
+import { getDonorDonations, getDonorSummaryStats } from "@/features/donation/services/donation.service";
 
 export const dynamic = "force-dynamic";
 
@@ -23,10 +23,10 @@ interface PageProps {
 type DonationStatusType = "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED";
 
 const STATUS_STYLES: Record<DonationStatusType, string> = {
-  COMPLETED: "bg-emerald-100 text-emerald-700",
-  PENDING:   "bg-amber-100 text-amber-700",
-  FAILED:    "bg-red-100 text-red-700",
-  REFUNDED:  "bg-slate-100 text-slate-600",
+  COMPLETED: "bg-emerald-100 text-emerald-700 border border-emerald-200",
+  PENDING:   "bg-amber-100 text-amber-700 border border-amber-200",
+  FAILED:    "bg-red-100 text-red-700 border border-red-200",
+  REFUNDED:  "bg-slate-100 text-slate-600 border border-slate-200",
 };
 
 function formatCurrency(n: number) {
@@ -54,52 +54,16 @@ export default async function MyDonationsPage({ searchParams }: PageProps) {
       ? (status as DonationStatus)
       : undefined;
 
-  const profile = await prisma.profile.findUnique({
-    where: { id: user.id },
-    select: { role: true },
-  });
-
-  const isOrganizerRole =
-    profile?.role === "ORGANIZER" || profile?.role === "PENDING_ORGANIZER";
-
-  const donationWhere = isOrganizerRole
-    ? {
-        campaign: { organizerId: user.id },
-        ...(statusFilter ? { status: statusFilter } : {}),
-      }
-    : {
-        donorId: user.id,
-        ...(statusFilter ? { status: statusFilter } : {}),
-      };
-
-  const summaryWhere = isOrganizerRole
-    ? { campaign: { organizerId: user.id } }
-    : { donorId: user.id };
-
   const [donations, summary] = await Promise.all([
-    prisma.donation.findMany({
-      where: donationWhere,
-      orderBy: { createdAt: "desc" },
-      take: 50,
-      include: { campaign: { select: { title: true, slug: true } } },
-    }),
-    prisma.donation.groupBy({
-      by: ["status"],
-      where: summaryWhere,
-      _count: { id: true },
-      _sum: { amount: true },
-    }),
+    getDonorDonations(user.id, statusFilter),
+    getDonorSummaryStats(user.id),
   ]);
-
-  const countMap = Object.fromEntries(summary.map((s) => [s.status, s._count.id]));
-  const amountMap = Object.fromEntries(summary.map((s) => [s.status, Number(s._sum.amount ?? 0)]));
-  const totalRaised = amountMap["COMPLETED"] ?? 0;
 
   const stats: StatItem[] = [
     {
       id: "total",
       title: "Total Donated",
-      value: formatCurrency(totalRaised),
+      value: formatCurrency(summary.totalDonated),
       icon: <HandCoins className="h-6 w-6" />,
       description: "Completed donations",
       variant: "emerald",
@@ -107,7 +71,7 @@ export default async function MyDonationsPage({ searchParams }: PageProps) {
     {
       id: "completed",
       title: "Successful",
-      value: countMap["COMPLETED"] ?? 0,
+      value: summary.completedCount,
       icon: <CheckCircle2 className="h-6 w-6" />,
       description: "Completed transactions",
       variant: "blue",
@@ -115,7 +79,7 @@ export default async function MyDonationsPage({ searchParams }: PageProps) {
     {
       id: "pending",
       title: "Pending",
-      value: countMap["PENDING"] ?? 0,
+      value: summary.pendingCount,
       icon: <Clock className="h-6 w-6" />,
       description: "Awaiting completion",
       variant: "amber",
@@ -123,7 +87,7 @@ export default async function MyDonationsPage({ searchParams }: PageProps) {
     {
       id: "failed",
       title: "Failed / Refunded",
-      value: (countMap["FAILED"] ?? 0) + (countMap["REFUNDED"] ?? 0),
+      value: summary.failedCount,
       icon: <AlertCircle className="h-6 w-6" />,
       description: "Unsuccessful transactions",
       variant: "red",
@@ -131,7 +95,7 @@ export default async function MyDonationsPage({ searchParams }: PageProps) {
   ];
 
   const STATUS_TABS = [
-    { label: "All",      value: "" },
+    { label: "All",       value: "" },
     { label: "Completed", value: "COMPLETED" },
     { label: "Pending",   value: "PENDING" },
     { label: "Failed",    value: "FAILED" },
@@ -141,16 +105,16 @@ export default async function MyDonationsPage({ searchParams }: PageProps) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">My Donations</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Track all your donations across every campaign.
+            Track all your donations across every campaign in real-time.
           </p>
         </div>
         <Link
           href="/campaigns/browse"
-          className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+          className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
         >
           Browse Campaigns
         </Link>
@@ -185,15 +149,17 @@ export default async function MyDonationsPage({ searchParams }: PageProps) {
       {donations.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white py-16 text-center">
           <HandCoins className="mb-4 h-10 w-10 text-slate-300" />
-          <h3 className="text-base font-semibold text-slate-900">No donations yet</h3>
+          <h3 className="text-base font-semibold text-slate-900">No donations found</h3>
           <p className="mt-2 text-sm text-slate-500">
-            When you donate to a campaign, it will appear here.
+            {statusFilter
+              ? `You have no donations with status "${statusFilter}".`
+              : "When you donate to a campaign, your record will appear here."}
           </p>
           <Link
             href="/campaigns/browse"
             className="mt-6 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
           >
-            Browse Campaigns
+            Explore Causes
           </Link>
         </div>
       ) : (
@@ -202,7 +168,7 @@ export default async function MyDonationsPage({ searchParams }: PageProps) {
             <table className="min-w-full divide-y divide-slate-200">
               <thead className="bg-slate-50">
                 <tr>
-                  {["Campaign", "Amount", "Date", "Status", ""].map((h) => (
+                  {["Campaign & Organization", "Amount", "Date", "Status", "Payment Gateway", "Receipt"].map((h) => (
                     <th
                       key={h}
                       className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-500"
@@ -215,16 +181,20 @@ export default async function MyDonationsPage({ searchParams }: PageProps) {
               <tbody className="divide-y divide-slate-100">
                 {donations.map((d) => (
                   <tr key={d.id} className="transition-colors hover:bg-slate-50">
-                    <td className="max-w-[220px] px-5 py-4">
+                    <td className="max-w-[280px] px-5 py-4">
                       <Link
                         href={`/campaigns/${d.campaignId}`}
-                        className="text-sm font-medium text-slate-900 hover:text-emerald-600 truncate block"
+                        className="text-sm font-bold text-slate-900 hover:text-emerald-600 truncate block"
                       >
                         {d.campaign.title}
                       </Link>
+                      <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+                        <Building2 className="h-3 w-3 text-slate-400" />
+                        {d.campaign.organization.name}
+                      </p>
                     </td>
-                    <td className="whitespace-nowrap px-5 py-4 text-sm font-semibold text-emerald-600">
-                      {formatCurrency(Number(d.amount))}
+                    <td className="whitespace-nowrap px-5 py-4 text-sm font-bold text-emerald-600">
+                      {formatCurrency(d.amount)}
                     </td>
                     <td className="whitespace-nowrap px-5 py-4 text-sm text-slate-500">
                       {formatDate(d.donatedAt ?? d.createdAt)}
@@ -234,20 +204,23 @@ export default async function MyDonationsPage({ searchParams }: PageProps) {
                         {d.status}
                       </span>
                     </td>
+                    <td className="whitespace-nowrap px-5 py-4 text-xs font-medium text-slate-600">
+                      {d.payment?.gateway || "MOCK"}
+                    </td>
                     <td className="whitespace-nowrap px-5 py-4 text-right">
                       {d.status === "COMPLETED" && (
                         <button
                           type="button"
-                          title="Download receipt"
-                          className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                          title="Download donation receipt"
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors"
                         >
-                          <Receipt className="h-3.5 w-3.5" />
+                          <Receipt className="h-3.5 w-3.5 text-emerald-600" />
                           Receipt
                         </button>
                       )}
                       {d.status === "PENDING" && (
-                        <span className="inline-flex items-center gap-1 text-xs text-amber-600">
-                          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600">
+                          <Clock className="h-3.5 w-3.5 animate-pulse" />
                           Processing
                         </span>
                       )}
