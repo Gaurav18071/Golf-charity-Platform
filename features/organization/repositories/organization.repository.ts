@@ -90,9 +90,17 @@ export async function findOrganizationByIdWithDocuments(
 export async function findOrganizationByProfileId(
   profileId: string
 ): Promise<Organization | null> {
-  return await prisma.organization.findUnique({
-    where: { profileId },
-  });
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(profileId);
+  if (!isUuid) return null;
+
+  try {
+    return await prisma.organization.findUnique({
+      where: { profileId },
+    });
+  } catch (error) {
+    console.warn("findOrganizationByProfileId database warning:", error);
+    return null;
+  }
 }
 
 /**
@@ -104,14 +112,22 @@ export async function findOrganizationByProfileId(
 export async function findOrganizationByProfileIdWithDocuments(
   profileId: string
 ): Promise<OrganizationWithDocuments | null> {
-  return await prisma.organization.findUnique({
-    where: { profileId },
-    include: {
-      documents: {
-        orderBy: { uploadedAt: "desc" },
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(profileId);
+  if (!isUuid) return null;
+
+  try {
+    return await prisma.organization.findUnique({
+      where: { profileId },
+      include: {
+        documents: {
+          orderBy: { uploadedAt: "desc" },
+        },
       },
-    },
-  });
+    });
+  } catch (error) {
+    console.warn("findOrganizationByProfileIdWithDocuments database warning:", error);
+    return null;
+  }
 }
 
 /**

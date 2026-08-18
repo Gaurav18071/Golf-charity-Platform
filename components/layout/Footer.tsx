@@ -1,186 +1,140 @@
+"use client";
+
 import Link from "next/link";
-import {
-  Globe,
-  Mail,
-  Heart,
-  Users,
-} from "lucide-react";
-
-const platformLinks = [
-  { label: "Competitions", href: "/competitions" },
-  { label: "Leaderboard", href: "/leaderboard" },
-  { label: "Charities", href: "/charities" },
-  { label: "Community", href: "/community" },
-];
-
-const companyLinks = [
-  { label: "About", href: "/about" },
-  { label: "Contact", href: "/contact" },
-  { label: "Careers", href: "/careers" },
-  { label: "FAQ", href: "/faq" },
-];
-
-const legalLinks = [
-  { label: "Privacy Policy", href: "/privacy-policy" },
-  { label: "Terms of Service", href: "/terms" },
-  { label: "Cookie Policy", href: "/cookies" },
-  { label: "Accessibility", href: "/accessibility" },
-];
-
-const socialLinks = [
-  {
-    icon: Globe,
-    href: "https://github.com",
-    label: "GitHub",
-  },
-  {
-    icon: Users,
-    href: "https://linkedin.com",
-    label: "LinkedIn",
-  },
-  {
-    icon: Mail,
-    href: "mailto:hello@golfcharity.com",
-    label: "Email",
-  },
-];
 
 export default function Footer() {
   return (
-    <footer className="border-t border-slate-200 bg-slate-950 text-slate-300">
-      <div className="container py-16">
-
-        <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-4">
-
-          {/* Brand */}
-          <div>
-
-            <Link
-              href="/"
-              className="text-2xl font-bold text-white"
-            >
-              ⛳ Golf Charity
+    <footer className="bg-[#0B3B24] text-emerald-100 border-t border-emerald-900/50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-16">
+        <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-12">
+          {/* Brand Col (4 cols) */}
+          <div className="lg:col-span-4 space-y-4">
+            <Link href="/" className="flex items-center gap-2.5">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-xs">
+                <svg
+                  className="h-5 w-5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="18" r="3" fill="white" />
+                  <path d="M12 2v13" />
+                  <path d="M12 3l6 4-6 4" fill="white" />
+                </svg>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xl font-extrabold text-white leading-none">
+                  Golf Charity
+                </span>
+                <span className="text-[11px] text-emerald-300 font-medium mt-0.5">
+                  Play Better. Give Better.
+                </span>
+              </div>
             </Link>
 
-            <p className="mt-5 leading-7 text-slate-400">
-              Bringing golfers, communities, and charities together
-              through meaningful competition and lasting impact.
+            <p className="text-xs text-emerald-200/80 leading-relaxed max-w-sm">
+              A subscription-based golf platform that combines the thrill of the game with the joy of giving.
             </p>
 
-            <div className="mt-8 flex gap-4">
-
-              {socialLinks.map((social) => {
-                const Icon = social.icon;
-
-                return (
-                  <Link
-                    key={social.label}
-                    href={social.href}
-                    aria-label={social.label}
-                    className="rounded-xl border border-slate-700 p-3 transition hover:border-emerald-500 hover:bg-emerald-500 hover:text-white"
-                  >
-                    <Icon size={18} />
-                  </Link>
-                );
-              })}
-
+            {/* Social Icons */}
+            <div className="flex items-center gap-3 pt-2">
+              {["Facebook", "Twitter", "Instagram", "LinkedIn"].map((platform) => (
+                <a
+                  key={platform}
+                  href="#"
+                  aria-label={platform}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-900/80 text-emerald-200 hover:bg-emerald-700 hover:text-white transition text-xs font-bold"
+                >
+                  {platform.charAt(0)}
+                </a>
+              ))}
             </div>
-
           </div>
 
-          {/* Platform */}
-          <div>
-
-            <h3 className="text-lg font-semibold text-white">
-              Platform
-            </h3>
-
-            <ul className="mt-6 space-y-4">
-
-              {platformLinks.map((link) => (
-                <li key={link.label}>
+          {/* Quick Links (3 cols) */}
+          <div className="lg:col-span-3 space-y-3">
+            <h4 className="text-sm font-bold text-white uppercase tracking-wider">
+              Quick Links
+            </h4>
+            <ul className="space-y-2 text-xs">
+              {[
+                { label: "Home", href: "/" },
+                { label: "Leaderboard", href: "/leaderboard" },
+                { label: "How It Works", href: "/how-it-works" },
+                { label: "Charities", href: "/charities" },
+                { label: "Draw Results", href: "/winner" },
+                { label: "Contact Us", href: "/support" },
+              ].map((item) => (
+                <li key={item.label}>
                   <Link
-                    href={link.href}
-                    className="transition hover:text-emerald-400"
+                    href={item.href}
+                    className="text-emerald-200/80 hover:text-white transition"
                   >
-                    {link.label}
+                    {item.label}
                   </Link>
                 </li>
               ))}
-
             </ul>
-
           </div>
 
-          {/* Company */}
-          <div>
-
-            <h3 className="text-lg font-semibold text-white">
-              Company
-            </h3>
-
-            <ul className="mt-6 space-y-4">
-
-              {companyLinks.map((link) => (
-                <li key={link.label}>
-                  <Link
-                    href={link.href}
-                    className="transition hover:text-emerald-400"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-
-            </ul>
-
-          </div>
-
-          {/* Legal */}
-          <div>
-
-            <h3 className="text-lg font-semibold text-white">
+          {/* Legal (2 cols) */}
+          <div className="lg:col-span-2 space-y-3">
+            <h4 className="text-sm font-bold text-white uppercase tracking-wider">
               Legal
-            </h3>
-
-            <ul className="mt-6 space-y-4">
-
-              {legalLinks.map((link) => (
-                <li key={link.label}>
+            </h4>
+            <ul className="space-y-2 text-xs">
+              {[
+                { label: "Terms & Conditions", href: "#" },
+                { label: "Privacy Policy", href: "#" },
+                { label: "Refund Policy", href: "#" },
+              ].map((item) => (
+                <li key={item.label}>
                   <Link
-                    href={link.href}
-                    className="transition hover:text-emerald-400"
+                    href={item.href}
+                    className="text-emerald-200/80 hover:text-white transition"
                   >
-                    {link.label}
+                    {item.label}
                   </Link>
                 </li>
               ))}
-
             </ul>
-
           </div>
 
+          {/* Newsletter (3 cols) */}
+          <div className="lg:col-span-3 space-y-3">
+            <h4 className="text-sm font-bold text-white uppercase tracking-wider">
+              Newsletter
+            </h4>
+            <p className="text-xs text-emerald-200/80 leading-relaxed">
+              Subscribe to get updates on draws, winners and charity stories.
+            </p>
+
+            <form
+              onSubmit={(e) => e.preventDefault()}
+              className="flex flex-col gap-2 pt-1"
+            >
+              <input
+                type="email"
+                placeholder="Enter your email"
+                className="w-full rounded-xl border border-emerald-800 bg-[#072B1A] px-3.5 py-2.5 text-xs text-white placeholder-emerald-400/60 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              />
+              <button
+                type="submit"
+                className="rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-500 transition shadow-xs"
+              >
+                Subscribe
+              </button>
+            </form>
+          </div>
         </div>
 
-        {/* Bottom Bar */}
-
-        <div className="mt-14 flex flex-col items-center justify-between gap-4 border-t border-slate-800 pt-8 text-sm text-slate-500 md:flex-row">
-
-          <p>
-            © {new Date().getFullYear()} Golf Charity. All rights reserved.
-          </p>
-
-          <p className="flex items-center gap-2">
-            Made with
-            <Heart
-              size={16}
-              className="fill-red-500 text-red-500"
-            />
-            for golfers and communities.
-          </p>
-
+        {/* Bottom copyright */}
+        <div className="mt-12 pt-6 border-t border-emerald-900/60 text-center text-xs text-emerald-400/70">
+          © 2026 Golf Charity. All rights reserved.
         </div>
-
       </div>
     </footer>
   );
