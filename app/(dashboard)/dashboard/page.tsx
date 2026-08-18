@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
-import { DonationStatus, CampaignStatus } from "@prisma/client";
+import { DonationStatus, CampaignStatus, OrganizationVerificationStatus } from "@prisma/client";
 import { redirect } from "next/navigation";
 
 import { DonorDashboard } from "@/components/dashboard/role-views/DonorDashboard";
@@ -33,35 +33,63 @@ export default async function DashboardPage() {
     user.email?.split("@")[0] ||
     "User";
 
-  // ── Profile ───────────────────────────────────────────────────────────────
-  const profile = await prisma.profile.findUnique({
-    where: { id: user.id },
-  });
+  // ── Profile Resolution ───────────────────────────────────────────────────
+  let profile = null;
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id);
+
+  try {
+    if (isUuid) {
+      profile = await prisma.profile.findUnique({
+        where: { id: user.id },
+      });
+    }
+
+    if (!profile && user.email) {
+      profile = await prisma.profile.findUnique({
+        where: { email: user.email },
+      });
+    }
+
+    if (!profile && isUuid) {
+      profile = await prisma.profile.create({
+        data: {
+          id: user.id,
+          email: user.email ?? "",
+          fullName:
+            user.user_metadata?.full_name ||
+            user.user_metadata?.name ||
+            user.email?.split("@")[0] ||
+            "User",
+          role: (user.user_metadata?.role as any) || "DONOR",
+        },
+      });
+    }
+  } catch (e) {
+    console.warn("Profile resolution in dashboard warning:", e);
+  }
 
   // Role — always trust DB profile as source of truth.
   // user_metadata.role is only used as fallback if profile row doesn't exist yet.
   const role = profile?.role ?? (user.user_metadata?.role as string) ?? "DONOR";
-  
-  // DEBUG: Log role detection
-  console.log("=== DASHBOARD ROLE DEBUG ===");
-  console.log("User ID:", user.id);
-  console.log("User Email:", user.email);
-  console.log("Profile Role:", profile?.role);
-  console.log("User Metadata Role:", user.user_metadata?.role);
-  console.log("Final Role:", role);
-  console.log("============================");
 
   // ── Shared: recent donations for current user ─────────────────────────────
-  const sharedDonations = await prisma.donation.findMany({
-    where: { donorId: user.id },
-    orderBy: { createdAt: "desc" },
-    take: 5,
-    include: { campaign: { select: { title: true } } },
-  });
+  let sharedDonations: any[] = [];
+  if (isUuid) {
+    try {
+      sharedDonations = await prisma.donation.findMany({
+        where: { donorId: user.id },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+        include: { campaign: { select: { title: true } } },
+      });
+    } catch (err) {
+      console.warn("Could not fetch user donations:", err);
+    }
+  }
 
   const recentDonations: RecentDonationItem[] = sharedDonations.map((d) => ({
     id: d.id,
-    campaignTitle: d.campaign.title,
+    campaignTitle: d.campaign?.title ?? "Campaign",
     amount: Number(d.amount),
     status: d.status as RecentDonationItem["status"],
     date: formatDate(d.donatedAt ?? d.createdAt),
@@ -78,32 +106,31 @@ export default async function DashboardPage() {
       pendingCampaignApprovals,
       adminRecentDonations,
     ] = await Promise.all([
-      prisma.profile.count(),
-      prisma.campaign.count(),
-      prisma.donation.count({ where: { status: DonationStatus.COMPLETED } }),
+      prisma.profile.count().catch(() => 0),
+      prisma.campaign.count().catch(() => 0),
+      prisma.donation.count({ where: { status: DonationStatus.COMPLETED } }).catch(() => 0),
       prisma.donation.aggregate({
         where: { status: DonationStatus.COMPLETED },
         _sum: { amount: true },
-      }),
-      // Pending organizer requests = organizations with PENDING/UNDER_REVIEW status
+      }).catch(() => ({ _sum: { amount: 0 } })),
       prisma.organization.count({ 
         where: { 
-          verificationStatus: { in: ["PENDING", "UNDER_REVIEW"] },
+          verificationStatus: { in: [OrganizationVerificationStatus.PENDING, OrganizationVerificationStatus.UNDER_REVIEW] },
           deletedAt: null,
         } 
-      }),
-      prisma.campaign.count({ where: { status: CampaignStatus.DRAFT } }),
+      }).catch(() => 0),
+      prisma.campaign.count({ where: { status: CampaignStatus.DRAFT } }).catch(() => 0),
       prisma.donation.findMany({
         where: { status: DonationStatus.COMPLETED },
-        orderBy: { donatedAt: "desc" },
+        orderBy: { createdAt: "desc" },
         take: 5,
         include: { campaign: { select: { title: true } } },
-      }),
+      }).catch(() => []),
     ]);
 
     const adminDonations: RecentDonationItem[] = adminRecentDonations.map((d) => ({
       id: d.id,
-      campaignTitle: d.campaign.title,
+      campaignTitle: d.campaign?.title ?? "Campaign",
       amount: Number(d.amount),
       status: d.status as RecentDonationItem["status"],
       date: formatDate(d.donatedAt ?? d.createdAt),
@@ -129,17 +156,23 @@ export default async function DashboardPage() {
   if (role === "DONOR") {
     const [totalDonated, campaignsSupported, activeDonations] =
       await Promise.all([
-        prisma.donation.aggregate({
-          where: { donorId: user.id, status: DonationStatus.COMPLETED },
-          _sum: { amount: true },
-        }),
-        prisma.donation.groupBy({
-          by: ["campaignId"],
-          where: { donorId: user.id, status: DonationStatus.COMPLETED },
-        }),
-        prisma.donation.count({
-          where: { donorId: user.id, status: DonationStatus.PENDING },
-        }),
+        isUuid
+          ? prisma.donation.aggregate({
+              where: { donorId: user.id, status: DonationStatus.COMPLETED },
+              _sum: { amount: true },
+            }).catch(() => ({ _sum: { amount: 0 } }))
+          : { _sum: { amount: 0 } },
+        isUuid
+          ? prisma.donation.groupBy({
+              by: ["campaignId"],
+              where: { donorId: user.id, status: DonationStatus.COMPLETED },
+            }).catch(() => [])
+          : [],
+        isUuid
+          ? prisma.donation.count({
+              where: { donorId: user.id, status: DonationStatus.PENDING },
+            }).catch(() => 0)
+          : 0,
       ]);
 
     return (
@@ -158,7 +191,7 @@ export default async function DashboardPage() {
 
   // ── PENDING_ORGANIZER view ────────────────────────────────────────────────
   if (role === "PENDING_ORGANIZER") {
-    const organization = await getOrganizationByProfileId(user.id, false);
+    const organization = isUuid ? await getOrganizationByProfileId(user.id, false) : null;
 
     return (
       <PendingOrganizerDashboard
@@ -174,21 +207,27 @@ export default async function DashboardPage() {
   if (role === "ORGANIZER") {
     const [organization, totalCampaigns, activeCampaigns, totalRaised, totalDonationsCount] =
       await Promise.all([
-        getOrganizationByProfileId(user.id, true),
-        prisma.campaign.count({ where: { organizerId: user.id } }),
-        prisma.campaign.count({
-          where: { organizerId: user.id, status: CampaignStatus.ACTIVE },
-        }),
-        prisma.campaign.aggregate({
-          where: { organizerId: user.id },
-          _sum: { currentAmount: true },
-        }),
-        prisma.donation.count({
-          where: {
-            campaign: { organizerId: user.id },
-            status: DonationStatus.COMPLETED,
-          },
-        }),
+        isUuid ? getOrganizationByProfileId(user.id, true) : null,
+        isUuid ? prisma.campaign.count({ where: { organizerId: user.id } }).catch(() => 0) : 0,
+        isUuid
+          ? prisma.campaign.count({
+              where: { organizerId: user.id, status: CampaignStatus.ACTIVE },
+            }).catch(() => 0)
+          : 0,
+        isUuid
+          ? prisma.campaign.aggregate({
+              where: { organizerId: user.id },
+              _sum: { currentAmount: true },
+            }).catch(() => ({ _sum: { currentAmount: 0 } }))
+          : { _sum: { currentAmount: 0 } },
+        isUuid
+          ? prisma.donation.count({
+              where: {
+                campaign: { organizerId: user.id },
+                status: DonationStatus.COMPLETED,
+              },
+            }).catch(() => 0)
+          : 0,
       ]);
 
     const docCount =
@@ -200,19 +239,26 @@ export default async function DashboardPage() {
       ? calculateCompletionPercentage(organization, docCount)
       : 100;
 
-    const orgDonations = await prisma.donation.findMany({
-      where: {
-        campaign: { organizerId: user.id },
-        status: DonationStatus.COMPLETED,
-      },
-      orderBy: { createdAt: "desc" },
-      take: 5,
-      include: { campaign: { select: { title: true } } },
-    });
+    let orgDonations: any[] = [];
+    if (isUuid) {
+      try {
+        orgDonations = await prisma.donation.findMany({
+          where: {
+            campaign: { organizerId: user.id },
+            status: DonationStatus.COMPLETED,
+          },
+          orderBy: { createdAt: "desc" },
+          take: 5,
+          include: { campaign: { select: { title: true } } },
+        });
+      } catch (e) {
+        console.warn("Could not fetch org donations:", e);
+      }
+    }
 
     const orgRecentDonations: RecentDonationItem[] = orgDonations.map((d) => ({
       id: d.id,
-      campaignTitle: d.campaign.title,
+      campaignTitle: d.campaign?.title ?? "Campaign",
       amount: Number(d.amount),
       status: d.status as RecentDonationItem["status"],
       date: formatDate(d.donatedAt ?? d.createdAt),
@@ -245,7 +291,7 @@ export default async function DashboardPage() {
     );
   }
 
-  // ── Fallback to DONOR (should never reach here with proper role assignment) ──
+  // ── Fallback to DONOR ──
   return (
     <DonorDashboard
       userName={userName}

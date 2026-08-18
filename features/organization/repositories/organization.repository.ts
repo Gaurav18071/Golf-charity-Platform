@@ -314,7 +314,7 @@ export async function findOrganizationsForAdminReview(options?: {
 export async function findOrganizationForAdminReview(
   id: string
 ): Promise<OrganizationAdminReviewDetail | null> {
-  const organization = await prisma.organization.findUnique({
+  const organization = await prisma.organization.findFirst({
     where: {
       id,
       deletedAt: null,

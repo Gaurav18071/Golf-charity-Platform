@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Send, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import Link from "next/link";
+import { Send, Loader2, CheckCircle2, AlertCircle, FileText } from "lucide-react";
 import { submitOrganizationAction } from "@/features/organization/actions/organization.actions";
 
 interface SubmitForReviewButtonProps {
@@ -44,12 +45,25 @@ export function SubmitForReviewButton({
     }
   };
 
+  const isMissingDocsError = error?.toLowerCase().includes("missing required documents");
+
   return (
     <div className="space-y-2">
       {error && (
         <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800">
           <AlertCircle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
-          <span>{error}</span>
+          <div className="flex-1">
+            <span>{error}</span>
+            {isMissingDocsError && (
+              <Link
+                href="/organizer/documents"
+                className="mt-1.5 flex items-center gap-1.5 font-semibold text-red-700 underline underline-offset-2 hover:text-red-900"
+              >
+                <FileText className="h-3.5 w-3.5" />
+                Go to Documents to upload required files →
+              </Link>
+            )}
+          </div>
         </div>
       )}
 

@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2, CheckCircle2 } from "lucide-react";
+import { updateCampaignAction } from "@/app/actions/campaign.actions";
 import { CampaignImagePicker } from "./CampaignImagePicker";
 
 const schema = z.object({
@@ -43,10 +45,30 @@ const CATEGORIES = [
   { label: "Other", value: "OTHER" },
 ];
 
-export default function CreateCampaignForm() {
+interface EditCampaignFormProps {
+  campaign: {
+    id: string;
+    slug: string;
+    title: string;
+    description: string;
+    category: string;
+    goalAmount: number;
+    coverImageUrl?: string | null;
+    story?: string | null;
+    location?: string | null;
+    endDate: string;
+    beneficiaryName?: string | null;
+    beneficiaryStory?: string | null;
+  };
+}
+
+export function EditCampaignForm({ campaign }: EditCampaignFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [feedback, setFeedback] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
 
   const {
     register,
@@ -54,39 +76,63 @@ export default function CreateCampaignForm() {
     setValue,
     watch,
     formState: { errors },
-  } = useForm<FormData>({ resolver: zodResolver(schema) });
+  } = useForm<FormData>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      title: campaign.title,
+      description: campaign.description,
+      category: campaign.category,
+      goalAmount: campaign.goalAmount.toString(),
+      coverImageUrl: campaign.coverImageUrl || "",
+      story: campaign.story || "",
+      location: campaign.location || "",
+      endDate: campaign.endDate ? campaign.endDate.slice(0, 10) : "",
+      beneficiaryName: campaign.beneficiaryName || "",
+      beneficiaryDescription: campaign.beneficiaryStory || "",
+    },
+  });
 
   const coverImageUrl = watch("coverImageUrl");
 
   const onSubmit = async (data: FormData) => {
     try {
       setLoading(true);
-      setError("");
+      setFeedback(null);
 
-      const shortDescription =
-        data.description.length > 150
-          ? data.description.slice(0, 147) + "..."
-          : data.description;
-
-      const res = await fetch("/api/campaigns", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...data,
-          shortDescription,
-          goalAmount: Number(data.goalAmount),
-        }),
+      const res = await updateCampaignAction({
+        campaignId: campaign.id,
+        title: data.title,
+        description: data.description,
+        category: data.category,
+        goalAmount: Number(data.goalAmount),
+        coverImageUrl: data.coverImageUrl || undefined,
+        story: data.story || undefined,
+        location: data.location || undefined,
+        endDate: data.endDate,
+        beneficiaryName: data.beneficiaryName || undefined,
+        beneficiaryDescription: data.beneficiaryDescription || undefined,
       });
 
-      if (!res.ok) {
-        const json = (await res.json()) as { error?: string };
-        throw new Error(json.error ?? "Failed to create campaign");
+      if (!res.success) {
+        setFeedback({
+          type: "error",
+          message: res.error || "Failed to update campaign",
+        });
+      } else {
+        setFeedback({
+          type: "success",
+          message: "Campaign updated successfully! Redirecting…",
+        });
+        setTimeout(() => {
+          router.push(`/campaigns/${campaign.slug || campaign.id}`);
+          router.refresh();
+        }, 1000);
       }
-
-      const json = (await res.json()) as { id: string };
-      router.push(`/campaigns/${json.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setFeedback({
+        type: "error",
+        message: err instanceof Error ? err.message : "Something went wrong",
+      });
     } finally {
       setLoading(false);
     }
@@ -155,11 +201,11 @@ export default function CreateCampaignForm() {
 
           {/* Description */}
           <div className="sm:col-span-2 space-y-1.5">
-            <Label htmlFor="description">Campaign Summary / Short Description</Label>
+            <Label htmlFor="description">Campaign Summary / Description</Label>
             <textarea
               id="description"
               rows={3}
-              placeholder="Brief overview of your campaign cause and objective…"
+              placeholder="Brief overview of your campaign…"
               {...register("description")}
               className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 resize-none"
             />
@@ -176,7 +222,7 @@ export default function CreateCampaignForm() {
           <textarea
             id="story"
             rows={6}
-            placeholder="Tell donors the full story — why this campaign matters, who it helps, and what the funds will be used for…"
+            placeholder="Tell donors the full story…"
             {...register("story")}
             className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 resize-none"
           />
@@ -207,25 +253,28 @@ export default function CreateCampaignForm() {
         </div>
       </section>
 
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
+      {feedback && (
+        <Alert variant={feedback.type === "success" ? "default" : "destructive"}>
+          {feedback.type === "success" && <CheckCircle2 className="h-4 w-4 text-emerald-600 mr-2 inline" />}
+          <AlertDescription>{feedback.message}</AlertDescription>
         </Alert>
       )}
 
       {/* Actions */}
       <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <p className="text-sm text-slate-500">
-          Campaigns are submitted as <strong>Draft</strong> and require admin approval before going live.
-        </p>
-        <div className="flex gap-3">
-          <Button type="button" variant="outline" onClick={() => router.back()} disabled={loading}>
-            Cancel
-          </Button>
-          <Button type="submit" disabled={loading} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-            {loading ? "Submitting…" : "Submit for Review"}
-          </Button>
-        </div>
+        <Button type="button" variant="outline" onClick={() => router.back()} disabled={loading}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={loading} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+          {loading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              Saving Changes…
+            </>
+          ) : (
+            "Save Changes"
+          )}
+        </Button>
       </div>
     </form>
   );

@@ -52,6 +52,8 @@ export interface DonationWithDetails {
       id: string;
       name: string;
       logoUrl: string | null;
+      taxExemptionNo?: string | null;
+      panNumber?: string | null;
     };
   };
   payment: {
@@ -98,6 +100,8 @@ export interface CreateDonationResult {
   paymentId: string;
   paymentStatus: PaymentStatus;
   gateway: PaymentGateway;
+  gatewayOrderId: string;
+  keyId?: string;
 }
 
 export interface ProcessPaymentResult {
@@ -106,4 +110,39 @@ export interface ProcessPaymentResult {
   paymentId: string;
   paymentStatus: PaymentStatus;
   campaignCurrentAmount?: number;
+  gatewayPaymentId?: string;
+}
+
+export interface DonationReceiptDetails {
+  donationId: string;
+  amount: number;
+  currency: string;
+  status: DonationStatus;
+  donatedAt: Date | null;
+  isAnonymous: boolean;
+  message: string | null;
+  donor: {
+    fullName: string;
+    email: string;
+  };
+  campaign: {
+    id: string;
+    title: string;
+    slug: string;
+    organization: {
+      id: string;
+      name: string;
+      logoUrl: string | null;
+      taxExemptionNo: string | null;
+      panNumber: string | null;
+    };
+  };
+  payment: {
+    id: string;
+    gateway: PaymentGateway;
+    gatewayPaymentId: string | null;
+    gatewayOrderId: string | null;
+    status: PaymentStatus;
+    processedAt: Date | null;
+  } | null;
 }

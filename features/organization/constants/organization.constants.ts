@@ -155,11 +155,11 @@ export const ALLOWED_STATUS_TRANSITIONS: Record<
   OrganizationVerificationStatus,
   OrganizationVerificationStatus[]
 > = {
-  DRAFT: ["PENDING"],
-  PENDING: ["UNDER_REVIEW", "REJECTED"],
+  DRAFT: ["PENDING", "UNDER_REVIEW", "APPROVED", "REJECTED"],
+  PENDING: ["UNDER_REVIEW", "APPROVED", "REJECTED"],
   UNDER_REVIEW: ["APPROVED", "REJECTED", "PENDING"],
-  APPROVED: [],
-  REJECTED: ["PENDING"],
+  APPROVED: ["UNDER_REVIEW", "REJECTED"],
+  REJECTED: ["PENDING", "UNDER_REVIEW", "APPROVED"],
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -195,8 +195,10 @@ export const REQUIRED_DOCUMENTS_BY_TYPE: Record<
   CORPORATE: ["REGISTRATION_CERTIFICATE", "PAN_CARD", "GST_CERTIFICATE"],
   GOVERNMENT: ["GOVERNMENT_REGISTRATION", "BANK_STATEMENT"],
   RELIGIOUS: ["REGISTRATION_CERTIFICATE", "PAN_CARD", "BANK_STATEMENT"],
-  INDIVIDUAL: ["PAN_CARD", "BANK_STATEMENT"],
-  OTHER: ["PAN_CARD", "BANK_STATEMENT"],
+  // Flexible types — documents encouraged but not required to submit.
+  // Admin can request specific docs during the review process.
+  INDIVIDUAL: [],
+  OTHER: [],
 };
 
 /**

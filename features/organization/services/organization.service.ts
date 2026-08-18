@@ -426,9 +426,13 @@ export async function reviewOrganization(
     adminNotes
   );
 
-  // Business Rule: If approved, change profile role to ORGANIZER
+  // Business Rule: If approved, change profile role to ORGANIZER and approve pending documents
   if (verificationStatus === "APPROVED") {
     await changeRoleToOrganizer(organization.profileId);
+    await prisma.organizationDocument.updateMany({
+      where: { organizationId, verificationStatus: "PENDING" },
+      data: { verificationStatus: "APPROVED", reviewedAt: new Date() },
+    });
   }
 
   return updated;

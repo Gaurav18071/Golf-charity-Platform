@@ -8,11 +8,12 @@
  */
 
 import { prisma } from "@/lib/prisma";
-import { DonationStatus, PaymentGateway, PaymentStatus } from "@prisma/client";
+import { DonationStatus, PaymentGateway, PaymentStatus, Prisma } from "@prisma/client";
 import type {
   CreateDonationInput,
   DonationWithDetails,
   CampaignDonationStats,
+  DonationReceiptDetails,
 } from "../types/donation.types";
 
 /**
@@ -21,7 +22,9 @@ import type {
 export async function createDonationRecord(
   donorId: string,
   input: CreateDonationInput,
-  gateway: PaymentGateway = PaymentGateway.MOCK
+  gatewayOrderId: string,
+  gateway: PaymentGateway = PaymentGateway.RAZORPAY,
+  rawResponse?: Record<string, unknown>
 ) {
   return await prisma.$transaction(async (tx) => {
     const donation = await tx.donation.create({
@@ -40,14 +43,49 @@ export async function createDonationRecord(
       data: {
         donationId: donation.id,
         gateway,
-        gatewayOrderId: `ORD_${donation.id.slice(0, 8)}_${Date.now()}`,
+        gatewayOrderId,
         amount: input.amount,
         currency: input.currency ?? "INR",
         status: PaymentStatus.PENDING,
+        gatewayResponse: rawResponse as Prisma.InputJsonValue | undefined,
       },
     });
 
     return { donation, payment };
+  });
+}
+
+/**
+ * Finds a payment record by its gateway order ID.
+ */
+export async function findPaymentByGatewayOrderId(gatewayOrderId: string) {
+  return await prisma.payment.findUnique({
+    where: { gatewayOrderId },
+    include: {
+      donation: {
+        include: {
+          campaign: true,
+          donor: true,
+        },
+      },
+    },
+  });
+}
+
+/**
+ * Finds a payment record by its gateway payment ID.
+ */
+export async function findPaymentByGatewayPaymentId(gatewayPaymentId: string) {
+  return await prisma.payment.findUnique({
+    where: { gatewayPaymentId },
+    include: {
+      donation: {
+        include: {
+          campaign: true,
+          donor: true,
+        },
+      },
+    },
   });
 }
 
@@ -79,6 +117,8 @@ export async function findDonationById(
               id: true,
               name: true,
               logoUrl: true,
+              taxExemptionNo: true,
+              panNumber: true,
             },
           },
         },
@@ -107,6 +147,66 @@ export async function findDonationById(
           ...donation.payment,
         }
       : null,
+  };
+}
+
+/**
+ * Retrieves full donation receipt details by donation ID.
+ */
+export async function getDonationReceiptDetails(
+  donationId: string
+): Promise<DonationReceiptDetails | null> {
+  const donation = await prisma.donation.findUnique({
+    where: { id: donationId },
+    include: {
+      donor: {
+        select: {
+          fullName: true,
+          email: true,
+        },
+      },
+      campaign: {
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          organization: {
+            select: {
+              id: true,
+              name: true,
+              logoUrl: true,
+              taxExemptionNo: true,
+              panNumber: true,
+            },
+          },
+        },
+      },
+      payment: {
+        select: {
+          id: true,
+          gateway: true,
+          gatewayPaymentId: true,
+          gatewayOrderId: true,
+          status: true,
+          processedAt: true,
+        },
+      },
+    },
+  });
+
+  if (!donation) return null;
+
+  return {
+    donationId: donation.id,
+    amount: Number(donation.amount),
+    currency: donation.currency,
+    status: donation.status,
+    donatedAt: donation.donatedAt,
+    isAnonymous: donation.isAnonymous,
+    message: donation.message,
+    donor: donation.donor,
+    campaign: donation.campaign,
+    payment: donation.payment,
   };
 }
 
@@ -144,6 +244,8 @@ export async function findDonorDonations(
         select: {
           id: true,
           gateway: true,
+          gatewayOrderId: true,
+          gatewayPaymentId: true,
           status: true,
           processedAt: true,
         },
@@ -258,11 +360,13 @@ export async function getCampaignDonationStats(
 /**
  * Safely marks payment as CAPTURED and donation as COMPLETED,
  * and atomically increments campaign's currentAmount.
+ * Ensures idempotency: If already completed, returns immediately without re-incrementing.
  */
 export async function markPaymentAndDonationCompleted(
   donationId: string,
   gatewayPaymentId?: string,
-  gatewaySignature?: string
+  gatewaySignature?: string,
+  rawResponse?: Record<string, unknown>
 ) {
   return await prisma.$transaction(async (tx) => {
     const donation = await tx.donation.findUnique({
@@ -272,7 +376,7 @@ export async function markPaymentAndDonationCompleted(
 
     if (!donation) throw new Error("Donation not found");
     if (donation.status === DonationStatus.COMPLETED) {
-      return donation; // Already completed (idempotent)
+      return donation; // Already completed (idempotent guard)
     }
 
     const now = new Date();
@@ -285,10 +389,11 @@ export async function markPaymentAndDonationCompleted(
         data: {
           status: PaymentStatus.CAPTURED,
           gatewayPaymentId:
-            gatewayPaymentId || `PAY_${donationId.slice(0, 8)}_${Date.now()}`,
-          gatewaySignature: gatewaySignature || null,
+            gatewayPaymentId || donation.payment.gatewayPaymentId || `PAY_${donationId.slice(0, 8)}_${Date.now()}`,
+          gatewaySignature: gatewaySignature || donation.payment.gatewaySignature,
           processedAt: now,
           netAmount: amountNumber,
+          ...(rawResponse ? { gatewayResponse: rawResponse as Prisma.InputJsonValue } : {}),
         },
       });
     }
@@ -321,7 +426,8 @@ export async function markPaymentAndDonationCompleted(
  */
 export async function markPaymentAndDonationFailed(
   donationId: string,
-  failureReason: string
+  failureReason: string,
+  rawResponse?: Record<string, unknown>
 ) {
   return await prisma.$transaction(async (tx) => {
     const donation = await tx.donation.findUnique({
@@ -338,6 +444,7 @@ export async function markPaymentAndDonationFailed(
           status: PaymentStatus.FAILED,
           failureReason,
           processedAt: new Date(),
+          ...(rawResponse ? { gatewayResponse: rawResponse as Prisma.InputJsonValue } : {}),
         },
       });
     }

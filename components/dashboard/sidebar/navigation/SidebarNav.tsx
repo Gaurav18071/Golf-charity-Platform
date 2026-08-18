@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import {
   DASHBOARD_NAV_ITEMS,
   NAV_GROUP_ORDER,
@@ -14,14 +15,10 @@ import { NavItem } from "./NavItem";
  * Renders dashboard navigation items grouped by section,
  * filtered by the current user's role.
  *
- * Filtering rules (from constants/dashboard.ts):
- *   roles: []          → visible to ALL authenticated users
- *   roles: ["ADMIN"]   → visible only to ADMIN
- *
- * Groups with no visible items are omitted entirely.
- * While the profile loads, skeleton placeholders prevent layout shift.
+ * Highlights ONLY the precise active item.
  */
 export function SidebarNav() {
+  const pathname = usePathname();
   const { profile, loading } = useProfileContext();
 
   // ── Loading — skeleton prevents layout shift ───────────────────────────────
@@ -61,6 +58,17 @@ export function SidebarNav() {
     {} as Record<NavGroup, typeof visibleItems>
   );
 
+  // ── Determine single active href ──────────────────────────────────────────
+  const exactMatchExists = visibleItems.some((item) => item.href === pathname);
+  const activeHref = exactMatchExists
+    ? pathname
+    : visibleItems
+        .filter(
+          (item) =>
+            item.href !== "/dashboard" && pathname.startsWith(item.href + "/")
+        )
+        .sort((a, b) => b.href.length - a.href.length)[0]?.href;
+
   return (
     <nav
       className="flex flex-1 flex-col gap-4"
@@ -86,6 +94,7 @@ export function SidebarNav() {
                 title={item.title}
                 href={item.href}
                 icon={item.icon}
+                isActive={item.href === activeHref}
               />
             ))}
           </div>

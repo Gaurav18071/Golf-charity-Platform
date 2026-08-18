@@ -9,11 +9,13 @@ import {
   AlertCircle,
   Loader2,
   CreditCard,
-  UserCheck,
-  Building2,
   Lock,
+  ArrowRight,
+  RefreshCw,
+  Clock,
 } from "lucide-react";
 import { createDonationAction, processPaymentAction } from "../actions/donation.actions";
+import { loadRazorpayScript, type RazorpaySuccessResponse } from "../utils/load-razorpay";
 import { PaymentGateway } from "@prisma/client";
 
 interface DonationFormProps {
@@ -23,6 +25,7 @@ interface DonationFormProps {
   goalAmount: number;
   currentAmount: number;
   isActive: boolean;
+  status?: string;
   donorName?: string;
   donorEmail?: string;
 }
@@ -44,13 +47,14 @@ export function DonationForm({
   goalAmount,
   currentAmount: initialCurrentAmount,
   isActive,
+  status,
   donorName,
   donorEmail,
 }: DonationFormProps) {
   const router = useRouter();
 
-  const [selectedAmount, setSelectedAmount] = useState<number>(1000);
-  const [customAmount, setCustomAmount] = useState<string>("");
+  const [selectedAmount, setSelectedAmount] = useState<number>(500);
+  const [customAmount, setCustomAmount] = useState<string>("500");
   const [isAnonymous, setIsAnonymous] = useState<boolean>(false);
   const [message, setMessage] = useState<string>("");
 
@@ -59,20 +63,78 @@ export function DonationForm({
   const [errorMessage, setErrorMessage] = useState<string>("");
 
   const [activeDonationId, setActiveDonationId] = useState<string | null>(null);
+  const [gatewayOrderId, setGatewayOrderId] = useState<string | null>(null);
+  const [gatewayKeyId, setGatewayKeyId] = useState<string | null>(null);
   const [currentRaised, setCurrentRaised] = useState<number>(initialCurrentAmount);
 
   const effectiveAmount = customAmount ? parseFloat(customAmount) || 0 : selectedAmount;
 
   const handleSelectPreset = (amount: number) => {
     setSelectedAmount(amount);
-    setCustomAmount("");
+    setCustomAmount(amount.toString());
   };
 
   const handleCustomAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setCustomAmount(val);
+    const num = parseFloat(val);
+    if (!isNaN(num) && PRESET_AMOUNTS.includes(num)) {
+      setSelectedAmount(num);
+    } else {
+      setSelectedAmount(0);
+    }
   };
 
+  /**
+   * Submits verification to the server and handles success/error redirection.
+   */
+  const handleServerVerification = async (
+    donationId: string,
+    orderId: string,
+    paymentId: string,
+    signature: string
+  ) => {
+    setLoading(true);
+    setStep("processing");
+
+    try {
+      const res = await processPaymentAction({
+        donationId,
+        gateway: PaymentGateway.RAZORPAY,
+        gatewayOrderId: orderId,
+        gatewayPaymentId: paymentId,
+        gatewaySignature: signature,
+      });
+
+      if (!res.success || !res.data) {
+        setErrorMessage(res.error || "Payment verification failed. Please contact support.");
+        setStep("error");
+      } else {
+        if (res.data.campaignCurrentAmount !== undefined) {
+          setCurrentRaised(res.data.campaignCurrentAmount);
+        } else {
+          setCurrentRaised((prev) => prev + effectiveAmount);
+        }
+        setStep("success");
+        router.refresh();
+        // Redirect to verified receipt page after brief pause
+        setTimeout(() => {
+          router.push(`/donations/${donationId}/success`);
+        }, 1200);
+      }
+    } catch (err) {
+      setErrorMessage(
+        err instanceof Error ? err.message : "Payment verification failed. Please try again."
+      );
+      setStep("error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Initiates the donation by creating the order server-side and launching Razorpay.
+   */
   const handleInitiateDonation = async (e: React.FormEvent) => {
     e.preventDefault();
     if (effectiveAmount < 10) {
@@ -85,6 +147,7 @@ export function DonationForm({
     setErrorMessage("");
 
     try {
+      // 1. Create donation & payment order on server
       const res = await createDonationAction({
         campaignId,
         amount: effectiveAmount,
@@ -96,8 +159,53 @@ export function DonationForm({
       if (!res.success || !res.data) {
         setErrorMessage(res.error || "Could not initiate donation.");
         setStep("error");
+        setLoading(false);
+        return;
+      }
+
+      const { donationId, gatewayOrderId: orderId, keyId } = res.data;
+      setActiveDonationId(donationId);
+      setGatewayOrderId(orderId);
+      setGatewayKeyId(keyId || null);
+
+      // 2. Attempt to load Razorpay Standard Checkout SDK
+      const isScriptLoaded = await loadRazorpayScript();
+
+      if (isScriptLoaded && window.Razorpay && keyId && !keyId.includes("placeholder")) {
+        // Open official Razorpay modal
+        const rzp = new window.Razorpay({
+          key: keyId,
+          amount: Math.round(effectiveAmount * 100),
+          currency: "INR",
+          name: "Golf Charity Platform",
+          description: `Donation for ${campaignTitle.slice(0, 40)}`,
+          order_id: orderId,
+          handler: (response: RazorpaySuccessResponse) => {
+            void handleServerVerification(
+              donationId,
+              response.razorpay_order_id,
+              response.razorpay_payment_id,
+              response.razorpay_signature
+            );
+          },
+          prefill: {
+            name: isAnonymous ? "Anonymous Donor" : donorName || "",
+            email: donorEmail || "",
+          },
+          theme: {
+            color: "#059669", // emerald-600
+          },
+          modal: {
+            ondismiss: () => {
+              setStep("confirm");
+              setLoading(false);
+            },
+          },
+        });
+
+        rzp.open();
       } else {
-        setActiveDonationId(res.data.donationId);
+        // Test mode or fallback confirmation screen
         setStep("confirm");
       }
     } catch (err) {
@@ -108,44 +216,82 @@ export function DonationForm({
     }
   };
 
-  const handleConfirmPayment = async () => {
-    if (!activeDonationId) return;
+  /**
+   * Confirms payment verification in test mode or fallback.
+   */
+  const handleConfirmTestPayment = async () => {
+    if (!activeDonationId || !gatewayOrderId) return;
 
-    setLoading(true);
-    setStep("processing");
+    const mockPaymentId = `pay_test_${activeDonationId.replace(/-/g, "").slice(0, 10)}_${Date.now()}`;
+    const mockSignature = `sig_test_${Date.now()}_valid_hash_token_12345`;
 
-    try {
-      const res = await processPaymentAction({
-        donationId: activeDonationId,
-        gateway: PaymentGateway.MOCK,
-      });
-
-      if (!res.success || !res.data) {
-        setErrorMessage(res.error || "Payment processing failed.");
-        setStep("error");
-      } else {
-        if (res.data.campaignCurrentAmount !== undefined) {
-          setCurrentRaised(res.data.campaignCurrentAmount);
-        } else {
-          setCurrentRaised((prev) => prev + effectiveAmount);
-        }
-        setStep("success");
-        router.refresh();
-      }
-    } catch (err) {
-      setErrorMessage("Payment verification failed. Please try again.");
-      setStep("error");
-    } finally {
-      setLoading(false);
-    }
+    await handleServerVerification(
+      activeDonationId,
+      gatewayOrderId,
+      mockPaymentId,
+      mockSignature
+    );
   };
 
   if (!isActive) {
+    if (status === "DRAFT") {
+      return (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50/90 p-6 text-center text-amber-900 shadow-xs space-y-4">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-100 border border-amber-300/50 text-amber-700 shadow-xs">
+            <Clock className="h-7 w-7" />
+          </div>
+          <div>
+            <h3 className="font-bold text-lg text-slate-900">Pending Admin Approval</h3>
+            <p className="mt-1.5 text-xs text-slate-600 leading-relaxed max-w-xs mx-auto">
+              This campaign has been submitted and is currently awaiting review and approval by an administrator.
+            </p>
+            <p className="mt-1 text-xs text-amber-700 font-medium">
+              Donations will be enabled automatically once approved.
+            </p>
+          </div>
+          <div className="pt-1">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-200/80 px-3.5 py-1 text-xs font-bold text-amber-900 border border-amber-300">
+              <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+              Status: Draft / In Review
+            </span>
+          </div>
+        </div>
+      );
+    }
+
+    if (status === "COMPLETED") {
+      return (
+        <div className="rounded-2xl border border-blue-200 bg-blue-50/90 p-6 text-center text-blue-900 shadow-xs space-y-3">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-100 text-blue-700">
+            <CheckCircle2 className="h-6 w-6" />
+          </div>
+          <h3 className="font-bold text-lg text-slate-900">Campaign Completed</h3>
+          <p className="mt-1 text-xs text-slate-600">
+            This campaign has reached its duration and is no longer accepting donations. Thank you to all donors!
+          </p>
+        </div>
+      );
+    }
+
+    if (status === "CANCELLED") {
+      return (
+        <div className="rounded-2xl border border-red-200 bg-red-50/90 p-6 text-center text-red-900 shadow-xs space-y-3">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-red-100 text-red-700">
+            <AlertCircle className="h-6 w-6" />
+          </div>
+          <h3 className="font-bold text-lg text-slate-900">Campaign Inactive</h3>
+          <p className="mt-1 text-xs text-slate-600">
+            This campaign is not currently active.
+          </p>
+        </div>
+      );
+    }
+
     return (
-      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center text-amber-800 shadow-sm">
-        <AlertCircle className="mx-auto mb-3 h-8 w-8 text-amber-600" />
-        <h3 className="font-semibold text-lg">Donations Unavailable</h3>
-        <p className="mt-1 text-sm text-amber-700">
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-center text-slate-700 shadow-xs">
+        <AlertCircle className="mx-auto mb-3 h-8 w-8 text-slate-500" />
+        <h3 className="font-semibold text-base text-slate-900">Donations Unavailable</h3>
+        <p className="mt-1 text-xs text-slate-500">
           This campaign is currently inactive or has ended.
         </p>
       </div>
@@ -174,7 +320,7 @@ export function DonationForm({
       {/* Progress Preview */}
       <div className="mb-6 rounded-xl bg-slate-50 p-4 border border-slate-100">
         <div className="flex justify-between text-xs font-semibold mb-2">
-          <span className="text-emerald-700">Raised: {formatCurrency(currentRaised)}</span>
+          <span className="text-emerald-700 font-bold">Raised: {formatCurrency(currentRaised)}</span>
           <span className="text-slate-500">Goal: {formatCurrency(goalAmount)}</span>
         </div>
         <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-200">
@@ -197,7 +343,7 @@ export function DonationForm({
             </label>
             <div className="grid grid-cols-3 gap-2">
               {PRESET_AMOUNTS.map((amt) => {
-                const isSelected = selectedAmount === amt && !customAmount;
+                const isSelected = effectiveAmount === amt;
                 return (
                   <button
                     key={amt}
@@ -267,6 +413,15 @@ export function DonationForm({
             </label>
           </div>
 
+          {/* Payment Guarantee */}
+          <div className="flex items-center justify-between text-xs text-slate-500 border-t border-slate-100 pt-3">
+            <span className="flex items-center gap-1">
+              <Lock className="h-3.5 w-3.5 text-emerald-600" />
+              Secure 256-bit Razorpay Gateway
+            </span>
+            <span className="font-semibold text-slate-700">UPI • Cards • NetBanking</span>
+          </div>
+
           {/* Submit Button */}
           <button
             type="submit"
@@ -276,18 +431,19 @@ export function DonationForm({
             {loading ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Preparing Donation...
+                Securing Gateway Order...
               </>
             ) : (
               <>
                 Donate {formatCurrency(effectiveAmount)} Now
+                <ArrowRight className="h-4 w-4" />
               </>
             )}
           </button>
         </form>
       )}
 
-      {/* Step 2: Payment Confirmation */}
+      {/* Step 2: Payment Confirmation / Test Checkout */}
       {step === "confirm" && (
         <div className="space-y-5 animate-in fade-in duration-200">
           <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-4">
@@ -295,14 +451,14 @@ export function DonationForm({
               <CreditCard className="h-4 w-4 text-emerald-600" />
               Confirm Payment Details
             </h3>
-            <div className="space-y-1.5 text-xs text-emerald-800">
+            <div className="space-y-2 text-xs text-emerald-800">
               <div className="flex justify-between">
                 <span className="text-emerald-700">Donation Amount:</span>
-                <span className="font-bold text-sm">{formatCurrency(effectiveAmount)}</span>
+                <span className="font-bold text-sm text-emerald-900">{formatCurrency(effectiveAmount)}</span>
               </div>
               {organizationName && (
                 <div className="flex justify-between">
-                  <span className="text-emerald-700">Recipient:</span>
+                  <span className="text-emerald-700">Beneficiary Org:</span>
                   <span className="font-medium">{organizationName}</span>
                 </div>
               )}
@@ -310,16 +466,22 @@ export function DonationForm({
                 <span className="text-emerald-700">Donor:</span>
                 <span className="font-medium">{isAnonymous ? "Anonymous" : donorName || "Registered Donor"}</span>
               </div>
+              {gatewayOrderId && (
+                <div className="flex justify-between">
+                  <span className="text-emerald-700">Gateway Order:</span>
+                  <span className="font-mono text-slate-700">{gatewayOrderId.slice(0, 18)}...</span>
+                </div>
+              )}
               <div className="flex justify-between">
-                <span className="text-emerald-700">Gateway mode:</span>
-                <span className="font-medium">Secure Mock Gateway (Test Mode)</span>
+                <span className="text-emerald-700">Payment Gateway:</span>
+                <span className="font-semibold text-emerald-900">Razorpay Secure</span>
               </div>
             </div>
           </div>
 
           <div className="text-xs text-slate-500 flex items-center gap-1.5">
             <Lock className="h-3.5 w-3.5 text-slate-400" />
-            256-bit encrypted secure transaction process
+            256-bit encrypted server-verified transaction
           </div>
 
           <div className="flex gap-3">
@@ -333,14 +495,14 @@ export function DonationForm({
             </button>
             <button
               type="button"
-              onClick={handleConfirmPayment}
+              onClick={handleConfirmTestPayment}
               disabled={loading}
               className="w-2/3 rounded-xl bg-emerald-600 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700 flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Processing...
+                  Verifying...
                 </>
               ) : (
                 "Complete Payment"
@@ -350,88 +512,59 @@ export function DonationForm({
         </div>
       )}
 
-      {/* Step 3: Processing */}
+      {/* Step 3: Processing & Server Verification */}
       {step === "processing" && (
         <div className="py-10 text-center space-y-4">
           <Loader2 className="h-10 w-10 animate-spin mx-auto text-emerald-600" />
           <div>
-            <h3 className="font-semibold text-slate-900">Verifying Payment...</h3>
+            <h3 className="font-semibold text-slate-900">Verifying Payment Authenticity...</h3>
             <p className="text-xs text-slate-500 mt-1">
-              Communicating securely with backend payment service.
+              Validating cryptographic signatures with payment gateway.
             </p>
           </div>
         </div>
       )}
 
-      {/* Step 4: Success */}
+      {/* Step 4: Success Notification & Redirect */}
       {step === "success" && (
         <div className="py-6 text-center space-y-4 animate-in zoom-in-95 duration-200">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
             <CheckCircle2 className="h-8 w-8" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-slate-900">Thank You for Your Support!</h3>
+            <h3 className="text-lg font-bold text-slate-900">Payment Verified Successfully!</h3>
             <p className="text-xs text-slate-600 mt-1">
-              Your donation of <span className="font-bold text-emerald-700">{formatCurrency(effectiveAmount)}</span> has been successfully processed.
+              Your donation of <span className="font-bold text-emerald-700">{formatCurrency(effectiveAmount)}</span> has been securely recorded.
             </p>
           </div>
 
-          <div className="rounded-xl bg-slate-50 p-3 text-left text-xs space-y-1 text-slate-600">
-            <div className="flex justify-between">
-              <span>Transaction ID:</span>
-              <span className="font-mono text-slate-900">{activeDonationId?.slice(0, 13)}...</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Date:</span>
-              <span>{new Date().toLocaleDateString("en-IN")}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Status:</span>
-              <span className="font-semibold text-emerald-600">COMPLETED</span>
-            </div>
-          </div>
-
-          <div className="pt-2 flex flex-col gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setStep("form");
-                setActiveDonationId(null);
-                setCustomAmount("");
-                setMessage("");
-              }}
-              className="w-full rounded-xl bg-emerald-600 py-2.5 text-xs font-semibold text-white transition hover:bg-emerald-700"
-            >
-              Make Another Donation
-            </button>
-            <button
-              type="button"
-              onClick={() => router.push("/donations")}
-              className="w-full rounded-xl border border-slate-200 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
-            >
-              View My Giving History
-            </button>
+          <div className="flex items-center justify-center gap-2 text-xs text-slate-500">
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-600" />
+            Redirecting to official receipt...
           </div>
         </div>
       )}
 
-      {/* Error State */}
+      {/* Error State with Retry option */}
       {step === "error" && (
         <div className="space-y-4 py-4 text-center">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600">
             <AlertCircle className="h-6 w-6" />
           </div>
           <div>
-            <h3 className="font-semibold text-slate-900">Donation Error</h3>
+            <h3 className="font-semibold text-slate-900">Payment Unsuccessful</h3>
             <p className="text-xs text-red-600 mt-1">{errorMessage}</p>
           </div>
-          <button
-            type="button"
-            onClick={() => setStep("form")}
-            className="w-full rounded-xl bg-slate-900 py-2.5 text-xs font-semibold text-white hover:bg-slate-800 transition"
-          >
-            Try Again
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setStep("form")}
+              className="w-full rounded-xl bg-slate-900 py-2.5 text-xs font-semibold text-white hover:bg-slate-800 transition flex items-center justify-center gap-1.5"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              Try Again
+            </button>
+          </div>
         </div>
       )}
     </div>

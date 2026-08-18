@@ -5,17 +5,17 @@ import { CampaignCategory, CampaignStatus } from "@prisma/client";
 import { z } from "zod";
 
 const schema = z.object({
-  title: z.string().min(5),
-  shortDescription: z.string().min(10).max(180),
-  description: z.string().min(20),
-  category: z.string().min(1),
-  goalAmount: z.coerce.number().min(1000),
+  title: z.string().min(5, "Title must be at least 5 characters"),
+  shortDescription: z.string().optional(),
+  description: z.string().min(10, "Description must be at least 10 characters"),
+  category: z.string().min(1, "Category is required"),
+  goalAmount: z.coerce.number().min(1000, "Goal amount must be at least ₹1,000"),
   coverImageUrl: z.string().url().optional().or(z.literal("")),
-  story: z.string().min(50).optional().or(z.literal("")),
-  location: z.string().min(2).optional().or(z.literal("")),
-  endDate: z.string().min(1),
-  beneficiaryName: z.string().min(2).optional().or(z.literal("")),
-  beneficiaryDescription: z.string().min(10).optional().or(z.literal("")),
+  story: z.string().optional().or(z.literal("")),
+  location: z.string().optional().or(z.literal("")),
+  endDate: z.string().min(1, "End date is required"),
+  beneficiaryName: z.string().optional().or(z.literal("")),
+  beneficiaryDescription: z.string().optional().or(z.literal("")),
 });
 
 function toSlug(title: string): string {
@@ -77,18 +77,36 @@ export async function POST(request: Request) {
       );
     }
 
-    const normalizedCategoryKey = data.category.toUpperCase();
-    const category =
-      CampaignCategory[
-        normalizedCategoryKey as keyof typeof CampaignCategory
-      ];
+    const categoryMap: Record<string, CampaignCategory> = {
+      EDUCATION: CampaignCategory.EDUCATION,
+      HEALTHCARE: CampaignCategory.HEALTHCARE,
+      ENVIRONMENT: CampaignCategory.ENVIRONMENT,
+      ANIMAL_WELFARE: CampaignCategory.ANIMAL_WELFARE,
+      ANIMALS: CampaignCategory.ANIMAL_WELFARE,
+      DISASTER_RELIEF: CampaignCategory.DISASTER_RELIEF,
+      "DISASTER RELIEF": CampaignCategory.DISASTER_RELIEF,
+      COMMUNITY: CampaignCategory.COMMUNITY,
+      SPORTS: CampaignCategory.SPORTS,
+      FOOD: CampaignCategory.FOOD,
+      CHILD_WELFARE: CampaignCategory.CHILD_WELFARE,
+      ELDERLY_SUPPORT: CampaignCategory.ELDERLY_SUPPORT,
+      OTHER: CampaignCategory.OTHER,
+    };
 
-    if (!category) {
-      return NextResponse.json(
-        { error: "Unsupported campaign category" },
-        { status: 400 }
-      );
-    }
+    const normalizedCategoryKey = data.category.toUpperCase().replace(/\s+/g, "_");
+    const category =
+      categoryMap[normalizedCategoryKey] ||
+      categoryMap[data.category.toUpperCase()] ||
+      CampaignCategory[normalizedCategoryKey as keyof typeof CampaignCategory] ||
+      CampaignCategory.OTHER;
+
+    const shortDescription =
+      data.shortDescription?.trim() ||
+      (data.description.length > 150
+        ? data.description.slice(0, 147) + "..."
+        : data.description);
+
+    const description = data.description || shortDescription;
 
     const campaign = await prisma.campaign.create({
       data: {
@@ -97,8 +115,8 @@ export async function POST(request: Request) {
         title: data.title,
         slug: toSlug(data.title),
         category,
-        shortDescription: data.shortDescription,
-        description: data.description,
+        shortDescription,
+        description,
         story: data.story || null,
         beneficiaryName: data.beneficiaryName || null,
         beneficiaryStory: data.beneficiaryDescription || null,

@@ -8,6 +8,8 @@ import {
   rejectOrganizationFormAction,
   requestChangesOrganizationFormAction,
 } from "@/features/organization";
+import { AdminDocumentActions } from "@/components/dashboard/admin/AdminDocumentActions";
+import { AdminDecisionForms } from "@/components/dashboard/admin/AdminDecisionForms";
 import {
   VERIFICATION_STATUS_COLORS,
   DOCUMENT_STATUS_COLORS,
@@ -309,16 +311,14 @@ export default async function AdminOrganizationReviewPage({
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${getDocumentStatusClass(document.verificationStatus)}`}> 
                   {DOCUMENT_STATUS_LABELS[document.verificationStatus]}
                 </span>
-                <button className="rounded-lg bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
-                  Preview
-                </button>
-                <button className="rounded-lg bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-                  Download
-                </button>
+                <AdminDocumentActions
+                  documentId={document.id}
+                  fileName={document.originalFileName}
+                />
               </div>
             </div>
           ))}
@@ -370,60 +370,10 @@ export default async function AdminOrganizationReviewPage({
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-lg font-bold text-slate-900">Admin Decision</h2>
         </div>
-        <div className="grid gap-4 lg:grid-cols-3">
-          <form action={approveOrganizationFormAction} className="rounded-xl border border-emerald-200 p-4">
-            <input type="hidden" name="organizationId" value={organization.id} />
-            <div className="mb-3">
-              <div className="text-sm font-bold text-emerald-700">Approve</div>
-              <p className="mt-1 text-xs text-slate-500">Approve the organization and promote the profile.</p>
-            </div>
-            <label className="block text-xs font-semibold text-slate-600">
-              Admin notes
-              <textarea name="adminNotes" className="mt-1 min-h-[90px] w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-500" placeholder="Optional approval notes" />
-            </label>
-            <button className="mt-3 w-full rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">
-              Approve
-            </button>
-          </form>
-
-          <form action={rejectOrganizationFormAction} className="rounded-xl border border-red-200 p-4">
-            <input type="hidden" name="organizationId" value={organization.id} />
-            <div className="mb-3">
-              <div className="text-sm font-bold text-red-700">Reject</div>
-              <p className="mt-1 text-xs text-slate-500">Reject and record a reason for the organizer.</p>
-            </div>
-            <label className="block text-xs font-semibold text-slate-600">
-              Rejection reason
-              <textarea name="rejectionReason" required className="mt-1 min-h-[90px] w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-red-500" placeholder="Required reason" />
-            </label>
-            <label className="mt-3 block text-xs font-semibold text-slate-600">
-              Admin notes
-              <textarea name="adminNotes" className="mt-1 min-h-[90px] w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-red-500" placeholder="Optional notes" />
-            </label>
-            <button className="mt-3 w-full rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700">
-              Reject
-            </button>
-          </form>
-
-          <form action={requestChangesOrganizationFormAction} className="rounded-xl border border-amber-200 p-4">
-            <input type="hidden" name="organizationId" value={organization.id} />
-            <div className="mb-3">
-              <div className="text-sm font-bold text-amber-700">Request Changes</div>
-              <p className="mt-1 text-xs text-slate-500">Request corrections and move back to organizer.</p>
-            </div>
-            <label className="block text-xs font-semibold text-slate-600">
-              Change request notes
-              <textarea name="changeRequestNotes" required className="mt-1 min-h-[90px] w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-amber-500" placeholder="Required change notes" />
-            </label>
-            <label className="mt-3 block text-xs font-semibold text-slate-600">
-              Admin notes
-              <textarea name="adminNotes" className="mt-1 min-h-[90px] w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-amber-500" placeholder="Optional notes" />
-            </label>
-            <button className="mt-3 w-full rounded-xl border border-amber-400 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-700 hover:bg-amber-100">
-              Request Changes
-            </button>
-          </form>
-        </div>
+        <AdminDecisionForms
+          organizationId={organization.id}
+          currentStatus={organization.verificationStatus}
+        />
       </section>
     </div>
   );

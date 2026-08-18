@@ -16,6 +16,7 @@
  */
 
 import type { DocumentType } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { OrganizationStorageRepository } from "../repositories/storage.repository";
 import * as documentRepository from "../repositories/document.repository";
 import * as organizationRepository from "../repositories/organization.repository";
@@ -159,6 +160,15 @@ export class DocumentService {
     userId: string,
     organizationId: string
   ): Promise<boolean> {
+    const userProfile = await prisma.profile.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+
+    if (userProfile?.role === "ADMIN") {
+      return true;
+    }
+
     const organization = await organizationRepository.findOrganizationById(
       organizationId
     );

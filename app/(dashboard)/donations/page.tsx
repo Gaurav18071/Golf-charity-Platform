@@ -9,6 +9,8 @@ import {
   AlertCircle,
   Receipt,
   Building2,
+  ExternalLink,
+  RefreshCw,
 } from "lucide-react";
 import { StatsGrid } from "@/components/dashboard/widgets";
 import type { StatItem } from "@/components/dashboard/widgets";
@@ -112,12 +114,20 @@ export default async function MyDonationsPage({ searchParams }: PageProps) {
             Track all your donations across every campaign in real-time.
           </p>
         </div>
-        <Link
-          href="/campaigns/browse"
-          className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
-        >
-          Browse Campaigns
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            href="/donations/history"
+            className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+          >
+            Giving Analytics
+          </Link>
+          <Link
+            href="/campaigns/browse"
+            className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+          >
+            Browse Campaigns
+          </Link>
+        </div>
       </div>
 
       {/* Summary stats */}
@@ -168,7 +178,7 @@ export default async function MyDonationsPage({ searchParams }: PageProps) {
             <table className="min-w-full divide-y divide-slate-200">
               <thead className="bg-slate-50">
                 <tr>
-                  {["Campaign & Organization", "Amount", "Date", "Status", "Payment Gateway", "Receipt"].map((h) => (
+                  {["Campaign & Organization", "Amount", "Date", "Status", "Payment Gateway", "Action"].map((h) => (
                     <th
                       key={h}
                       className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-500"
@@ -205,24 +215,40 @@ export default async function MyDonationsPage({ searchParams }: PageProps) {
                       </span>
                     </td>
                     <td className="whitespace-nowrap px-5 py-4 text-xs font-medium text-slate-600">
-                      {d.payment?.gateway || "MOCK"}
+                      <span className="font-semibold text-slate-800">{d.payment?.gateway || "RAZORPAY"}</span>
+                      {d.payment?.gatewayPaymentId && (
+                        <span className="block text-[10px] font-mono text-slate-400 truncate max-w-[120px]">
+                          {d.payment.gatewayPaymentId}
+                        </span>
+                      )}
                     </td>
-                    <td className="whitespace-nowrap px-5 py-4 text-right">
+                    <td className="whitespace-nowrap px-5 py-4 text-left">
                       {d.status === "COMPLETED" && (
-                        <button
-                          type="button"
-                          title="Download donation receipt"
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                        <Link
+                          href={`/donations/${d.id}/success`}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition-colors"
                         >
                           <Receipt className="h-3.5 w-3.5 text-emerald-600" />
-                          Receipt
-                        </button>
+                          View Receipt
+                        </Link>
                       )}
                       {d.status === "PENDING" && (
-                        <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600">
-                          <Clock className="h-3.5 w-3.5 animate-pulse" />
-                          Processing
-                        </span>
+                        <Link
+                          href={`/campaigns/${d.campaignId}`}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-amber-50 border border-amber-200 px-3 py-1.5 text-xs font-semibold text-amber-800 hover:bg-amber-100 transition-colors"
+                        >
+                          <RefreshCw className="h-3.5 w-3.5" />
+                          Complete Payment
+                        </Link>
+                      )}
+                      {(d.status === "FAILED" || d.status === "REFUNDED") && (
+                        <Link
+                          href={`/donations/${d.id}/failed`}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 transition-colors"
+                        >
+                          <AlertCircle className="h-3.5 w-3.5" />
+                          Details & Retry
+                        </Link>
                       )}
                     </td>
                   </tr>

@@ -14,9 +14,12 @@ import {
   Share2,
   Heart,
   Globe,
+  Pencil,
 } from "lucide-react";
 import { DonationForm } from "@/features/donation/components/DonationForm";
 import { getCampaignDonationStats } from "@/features/donation/services/donation.service";
+import { SaveCampaignButton } from "@/components/dashboard/campaigns/SaveCampaignButton";
+import { CampaignApprovalButtons } from "@/components/dashboard/admin/CampaignApprovalButtons";
 
 export const dynamic = "force-dynamic";
 
@@ -52,43 +55,47 @@ export default async function CampaignDetailPage({ params }: PageProps) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  const [campaign, stats, donorProfile] = await Promise.all([
-    prisma.campaign.findUnique({
-      where: { id },
-      include: {
-        organization: {
-          select: {
-            id: true,
-            name: true,
-            type: true,
-            description: true,
-            website: true,
-            city: true,
-            state: true,
-            verificationStatus: true,
-            logoUrl: true,
-          },
-        },
-        organizer: {
-          select: {
-            fullName: true,
-            email: true,
-          },
+  const isUuid =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
+  const campaign = await prisma.campaign.findFirst({
+    where: isUuid ? { id, deletedAt: null } : { slug: id, deletedAt: null },
+    include: {
+      organization: {
+        select: {
+          id: true,
+          name: true,
+          type: true,
+          description: true,
+          website: true,
+          city: true,
+          state: true,
+          verificationStatus: true,
+          logoUrl: true,
         },
       },
-    }),
-    getCampaignDonationStats(id),
-    user
-      ? prisma.profile.findUnique({
-          where: { id: user.id },
-          select: { fullName: true, email: true },
-        })
-      : null,
-  ]);
+      organizer: {
+        select: {
+          fullName: true,
+          email: true,
+        },
+      },
+    },
+  });
 
   if (!campaign || campaign.deletedAt !== null) {
     notFound();
   }
+
+  const [stats, donorProfile] = await Promise.all([
+    getCampaignDonationStats(campaign.id),
+    user
+      ? prisma.profile.findUnique({
+          where: { id: user.id },
+          select: { fullName: true, email: true, role: true },
+        })
+      : null,
+  ]);
 
   const goal = Number(campaign.goalAmount);
   const current = Number(campaign.currentAmount);
@@ -97,9 +104,9 @@ export default async function CampaignDetailPage({ params }: PageProps) {
   const isActive = campaign.status === "ACTIVE" && daysLeft > 0;
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto pb-12">
-      {/* Back button */}
-      <div>
+    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+      {/* Top action row */}
+      <div className="flex items-center justify-between">
         <Link
           href="/campaigns/browse"
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-emerald-600 transition"
@@ -107,7 +114,47 @@ export default async function CampaignDetailPage({ params }: PageProps) {
           <ArrowLeft className="h-4 w-4" />
           Back to Campaigns
         </Link>
+
+        <SaveCampaignButton
+          campaignId={campaign.id}
+          campaignTitle={campaign.title}
+        />
       </div>
+
+      {/* Draft / Pending Approval Alert Banner */}
+      {campaign.status === "DRAFT" && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50/90 p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-3.5">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-800 border border-amber-300/40">
+              <Clock className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-amber-950">
+                Campaign Pending Admin Approval
+              </h3>
+              <p className="text-xs text-amber-800 mt-0.5 leading-relaxed">
+                This campaign is currently in review. Donations will automatically open once approved by platform administrators.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {(user?.id === campaign.organizerId || donorProfile?.role === "ADMIN") && (
+              <Link
+                href={`/campaigns/${campaign.id}/edit`}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-white px-3.5 py-2 text-xs font-semibold text-amber-900 shadow-xs hover:bg-amber-100 transition"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                Edit
+              </Link>
+            )}
+
+            {donorProfile?.role === "ADMIN" && (
+              <CampaignApprovalButtons campaignId={campaign.id} />
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Main Grid: Left details, Right donation widget */}
       <div className="grid gap-8 lg:grid-cols-3">
@@ -135,7 +182,7 @@ export default async function CampaignDetailPage({ params }: PageProps) {
             </p>
 
             {/* Cover Image */}
-            <div className="relative h-80 sm:h-96 w-full overflow-hidden rounded-2xl bg-slate-100 border border-slate-200">
+            <div className="relative h-80 sm:h-96 w-full overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-950 via-teal-900 to-slate-900 border border-slate-200 shadow-sm">
               {campaign.coverImageUrl ? (
                 <Image
                   src={campaign.coverImageUrl}
@@ -145,8 +192,24 @@ export default async function CampaignDetailPage({ params }: PageProps) {
                   unoptimized
                 />
               ) : (
-                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-emerald-50 to-teal-100 text-emerald-600">
-                  <Heart className="h-20 w-20 opacity-30" />
+                <div className="relative flex h-full w-full flex-col items-center justify-center p-8 text-center overflow-hidden">
+                  <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-emerald-500/10 blur-2xl" />
+                  <div className="absolute -left-16 -bottom-16 h-64 w-64 rounded-full bg-teal-500/10 blur-2xl" />
+
+                  <div className="relative z-10 flex flex-col items-center max-w-md">
+                    <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-emerald-400 shadow-inner">
+                      <Heart className="h-8 w-8 fill-emerald-400 text-emerald-400" />
+                    </div>
+                    <span className="rounded-full bg-emerald-500/20 backdrop-blur-md px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-emerald-300 border border-emerald-400/30 mb-2">
+                      {campaign.category.replace(/_/g, " ")}
+                    </span>
+                    <h2 className="text-xl sm:text-2xl font-extrabold text-white leading-snug drop-shadow-sm">
+                      {campaign.title}
+                    </h2>
+                    <p className="mt-2 text-xs sm:text-sm text-slate-300 line-clamp-2">
+                      {campaign.shortDescription}
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
@@ -286,6 +349,7 @@ export default async function CampaignDetailPage({ params }: PageProps) {
               goalAmount={goal}
               currentAmount={current}
               isActive={isActive}
+              status={campaign.status}
               donorName={donorProfile?.fullName}
               donorEmail={donorProfile?.email}
             />

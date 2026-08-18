@@ -11,12 +11,13 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { prisma } from "@/lib/prisma";
 import * as donationService from "../services/donation.service";
 import type { CreateDonationInput, ProcessPaymentInput } from "../types/donation.types";
 import { DonationStatus } from "@prisma/client";
 
 /**
- * Server action to create a donation record.
+ * Server action to create a donation record and gateway order.
  */
 export async function createDonationAction(input: CreateDonationInput) {
   try {
@@ -25,6 +26,34 @@ export async function createDonationAction(input: CreateDonationInput) {
 
     if (authError || !user) {
       return { success: false, error: "Unauthorized. Please log in to make a donation." };
+    }
+
+    // Ensure donor profile exists in Neon database
+    let profile = await prisma.profile.findUnique({
+      where: { id: user.id },
+    });
+
+    if (!profile) {
+      const email = user.email || `user_${user.id.slice(0, 8)}@example.com`;
+      const fullName =
+        (user.user_metadata?.full_name as string) ||
+        email.split("@")[0] ||
+        "Donor";
+
+      try {
+        profile = await prisma.profile.upsert({
+          where: { id: user.id },
+          update: {},
+          create: {
+            id: user.id,
+            email,
+            fullName,
+            role: "DONOR",
+          },
+        });
+      } catch (err) {
+        console.warn("Failed to auto-upsert donor profile:", err);
+      }
     }
 
     const result = await donationService.createDonation(user.id, input);
@@ -43,7 +72,7 @@ export async function createDonationAction(input: CreateDonationInput) {
 }
 
 /**
- * Server action to process/verify payment for a donation.
+ * Server action to process/verify payment for a donation using cryptographic signatures.
  */
 export async function processPaymentAction(input: ProcessPaymentInput) {
   try {
@@ -81,6 +110,30 @@ export async function processPaymentAction(input: ProcessPaymentInput) {
     return {
       success: false,
       error: error instanceof Error ? error.message : "Payment processing failed.",
+    };
+  }
+}
+
+/**
+ * Server action to get verified donation receipt details.
+ */
+export async function getDonationReceiptAction(donationId: string) {
+  try {
+    const receipt = await donationService.getDonationReceipt(donationId);
+
+    if (!receipt) {
+      return { success: false, error: "Donation receipt not found." };
+    }
+
+    return {
+      success: true,
+      data: receipt,
+    };
+  } catch (error) {
+    console.error("getDonationReceiptAction error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to fetch receipt details.",
     };
   }
 }

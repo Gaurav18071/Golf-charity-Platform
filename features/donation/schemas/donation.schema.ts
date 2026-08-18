@@ -31,7 +31,7 @@ export const processPaymentSchema = z.object({
     .string()
     .min(1, "Donation ID is required")
     .uuid("Invalid donation ID format"),
-  gateway: z.nativeEnum(PaymentGateway).default(PaymentGateway.MOCK),
+  gateway: z.nativeEnum(PaymentGateway).default(PaymentGateway.RAZORPAY),
   gatewayOrderId: z.string().optional(),
   gatewayPaymentId: z.string().optional(),
   gatewaySignature: z.string().optional(),
