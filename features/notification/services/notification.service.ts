@@ -2,9 +2,12 @@ import { prisma } from "@/lib/prisma";
 import { CreateNotificationInput, NotificationDTO } from "../types/notification.types";
 import { sendNotificationEmail } from "@/features/email/services/email.service";
 
+<<<<<<< HEAD
 // Safe delegate to prevent Windows DLL lock IDE warnings
 const db = prisma as any;
 
+=======
+>>>>>>> 747fc6b04196d68b122a5dc8d556dff0d93bb1e7
 /**
  * Creates an in-app notification and dispatches a background notification email.
  */
@@ -22,7 +25,11 @@ export async function createNotification(
       return null;
     }
 
+<<<<<<< HEAD
     const notification = await db.notification.create({
+=======
+    const notification = await prisma.notification.create({
+>>>>>>> 747fc6b04196d68b122a5dc8d556dff0d93bb1e7
       data: {
         userId: input.userId,
         type: input.type,
@@ -82,13 +89,21 @@ export async function getUserNotifications(
       );
     if (!isUuid) return [];
 
+<<<<<<< HEAD
     const items = await db.notification.findMany({
+=======
+    const items = await prisma.notification.findMany({
+>>>>>>> 747fc6b04196d68b122a5dc8d556dff0d93bb1e7
       where: { userId },
       orderBy: { createdAt: "desc" },
       take: limit,
     });
 
+<<<<<<< HEAD
     return items.map((n: any) => ({
+=======
+    return items.map((n) => ({
+>>>>>>> 747fc6b04196d68b122a5dc8d556dff0d93bb1e7
       id: n.id,
       userId: n.userId,
       type: n.type,
@@ -117,7 +132,11 @@ export async function getUnreadNotificationCount(
       );
     if (!isUuid) return 0;
 
+<<<<<<< HEAD
     return await db.notification.count({
+=======
+    return await prisma.notification.count({
+>>>>>>> 747fc6b04196d68b122a5dc8d556dff0d93bb1e7
       where: {
         userId,
         isRead: false,
@@ -143,7 +162,11 @@ export async function markNotificationAsRead(
       );
     if (!isUuid) return false;
 
+<<<<<<< HEAD
     await db.notification.updateMany({
+=======
+    await prisma.notification.updateMany({
+>>>>>>> 747fc6b04196d68b122a5dc8d556dff0d93bb1e7
       where: {
         id: notificationId,
         userId,
@@ -173,7 +196,11 @@ export async function markAllNotificationsAsRead(
       );
     if (!isUuid) return false;
 
+<<<<<<< HEAD
     await db.notification.updateMany({
+=======
+    await prisma.notification.updateMany({
+>>>>>>> 747fc6b04196d68b122a5dc8d556dff0d93bb1e7
       where: {
         userId,
         isRead: false,
