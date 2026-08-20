@@ -15,6 +15,7 @@ import { prisma } from "@/lib/prisma";
 import * as donationService from "../services/donation.service";
 import type { CreateDonationInput, ProcessPaymentInput } from "../types/donation.types";
 import { DonationStatus } from "@prisma/client";
+import { createNotification } from "@/features/notification/services/notification.service";
 
 /**
  * Server action to create a donation record and gateway order.
@@ -58,6 +59,14 @@ export async function createDonationAction(input: CreateDonationInput) {
 
     const result = await donationService.createDonation(user.id, input);
 
+    createNotification({
+      userId: user.id,
+      type: "DONATION_CREATED",
+      title: "Donation Initiated",
+      message: `Your donation of ₹${input.amount} has been initiated. Complete payment to finalize your contribution.`,
+      actionUrl: "/donations/history",
+    }).catch((e) => console.warn("Failed to dispatch donation notification:", e));
+
     return {
       success: true,
       data: result,
@@ -95,6 +104,14 @@ export async function processPaymentAction(input: ProcessPaymentInput) {
     }
 
     const result = await donationService.processPayment(input);
+
+    createNotification({
+      userId: user.id,
+      type: "DONATION_SUCCESSFUL",
+      title: "Donation Successful! 💚",
+      message: `Thank you for your generous contribution of ₹${donation.amount} to "${donation.campaign?.title || "Campaign"}".`,
+      actionUrl: "/donations/history",
+    }).catch((e) => console.warn("Failed to dispatch payment success notification:", e));
 
     revalidatePath(`/campaigns/${donation.campaignId}`);
     revalidatePath("/donations");

@@ -17,8 +17,7 @@ export default function HeroSection() {
               <br />
               Support{" "}
               <span className="text-emerald-700 underline decoration-emerald-300 decoration-wavy decoration-2">
-                Charities.
-              </span>
+                Charities.              </span>
             </h1>
 
             {/* Subtitle */}
