@@ -2,14 +2,20 @@
 
 import Link from "next/link";
 
-type CampaignStatus = "DRAFT" | "ACTIVE" | "COMPLETED" | "CANCELLED" | "UNDER_REVIEW" | "REJECTED";
+type CampaignStatus =
+  | "DRAFT"
+  | "PENDING_APPROVAL"
+  | "ACTIVE"
+  | "COMPLETED"
+  | "CANCELLED"
+  | "REJECTED";
 
 interface TopCampaignRow {
   id: string;
   title: string;
   goalAmount: number;
   currentAmount: number;
-  status: CampaignStatus;
+  status: CampaignStatus | string;
   donationCount: number;
 }
 
@@ -17,13 +23,13 @@ interface TopCampaignsTableProps {
   campaigns: TopCampaignRow[];
 }
 
-const STATUS_STYLES: Record<CampaignStatus, string> = {
-  ACTIVE:       "bg-emerald-100 text-emerald-700",
-  DRAFT:        "bg-amber-100 text-amber-700",
-  COMPLETED:    "bg-blue-100 text-blue-700",
-  CANCELLED:    "bg-red-100 text-red-700",
-  UNDER_REVIEW: "bg-purple-100 text-purple-700",
-  REJECTED:     "bg-red-100 text-red-700",
+const STATUS_STYLES: Record<string, string> = {
+  ACTIVE: "bg-emerald-100 text-emerald-700",
+  DRAFT: "bg-amber-100 text-amber-700",
+  PENDING_APPROVAL: "bg-amber-100 text-amber-700",
+  COMPLETED: "bg-blue-100 text-blue-700",
+  CANCELLED: "bg-red-100 text-red-700",
+  REJECTED: "bg-red-100 text-red-700",
 };
 
 function formatCurrency(n: number) {

@@ -1,284 +1,248 @@
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import { prisma } from "@/lib/prisma";
+import Link from "next/link";
 import {
   TrendingUp,
   HandCoins,
   Target,
   Users,
-  ArrowUpRight,
-  ArrowDownRight,
+  Download,
+  Calendar,
+  HeartHandshake,
 } from "lucide-react";
-import { prisma } from "@/lib/prisma";
-import { CampaignStatus, DonationStatus } from "@prisma/client";
+import { parseDateRange } from "@/features/analytics/utils/date-range";
+import {
+  getAdminPlatformAnalytics,
+  getOrganizerAnalytics,
+} from "@/features/analytics/services/analytics.service";
 import TopCampaignsTable from "@/components/dashboard/analytics/TopCampaignsTable";
 import DonationsByStatusChart from "@/components/dashboard/analytics/DonationsByStatusChart";
+import { StatsGrid } from "@/components/dashboard/widgets";
+import type { StatItem } from "@/components/dashboard/widgets";
 
 export const dynamic = "force-dynamic";
 
-function formatCurrency(amount: number): string {
-  if (amount >= 100000) return `₹${(amount / 100000).toFixed(2)}L`;
-  if (amount >= 1000) return `₹${(amount / 1000).toFixed(1)}K`;
-  return `₹${amount}`;
+interface AnalyticsPageProps {
+  searchParams: Promise<{ range?: string }>;
 }
 
-export default async function AnalyticsPage() {
-  const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+function formatCurrency(n: number): string {
+  if (n >= 100000) return `₹${(n / 100000).toFixed(2)}L`;
+  if (n >= 1000) return `₹${(n / 1000).toFixed(1)}K`;
+  return `₹${n}`;
+}
 
-  const [
-    totalRaised,
-    thisMonthRaised,
-    lastMonthRaised,
-    campaignStats,
-    subscriberCount,
-    thisMonthSubscribers,
-    lastMonthSubscribers,
-    donationsByStatus,
-    topCampaigns,
-    recentDonations,
-  ] = await Promise.all([
-    // Total raised (completed donations)
-    prisma.donation.aggregate({
-      _sum: { amount: true },
-      where: { status: DonationStatus.COMPLETED },
-    }),
+const RANGE_TABS = [
+  { label: "All Time", value: "all" },
+  { label: "Last 7 Days", value: "7d" },
+  { label: "Last 30 Days", value: "30d" },
+  { label: "Last 90 Days", value: "90d" },
+  { label: "This Month", value: "this_month" },
+  { label: "Last Month", value: "last_month" },
+];
 
-    // This month raised
-    prisma.donation.aggregate({
-      _sum: { amount: true },
-      where: {
-        status: DonationStatus.COMPLETED,
-        createdAt: { gte: startOfMonth },
+export default async function AnalyticsPage({
+  searchParams,
+}: AnalyticsPageProps) {
+  const { range = "all" } = await searchParams;
+  const dateRange = parseDateRange(range);
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) redirect("/login");
+
+  const profile = await prisma.profile.findUnique({
+    where: { id: user.id },
+    select: { id: true, role: true },
+  });
+
+  const role = profile?.role || "DONOR";
+
+  // ── ADMIN VIEW ─────────────────────────────────────────────────────────────
+  if (role === "ADMIN") {
+    const data = await getAdminPlatformAnalytics(dateRange);
+
+    const stats: StatItem[] = [
+      {
+        id: "revenue",
+        title: "Total Revenue Raised",
+        value: formatCurrency(data.totalRevenue),
+        icon: <TrendingUp className="h-6 w-6" />,
+        variant: "emerald",
       },
-    }),
-
-    // Last month raised
-    prisma.donation.aggregate({
-      _sum: { amount: true },
-      where: {
-        status: DonationStatus.COMPLETED,
-        createdAt: { gte: startOfLastMonth, lte: endOfLastMonth },
+      {
+        id: "donations",
+        title: "Total Donations",
+        value: data.totalDonations,
+        icon: <HandCoins className="h-6 w-6" />,
+        variant: "blue",
       },
-    }),
-
-    // Campaign counts
-    prisma.campaign.groupBy({
-      by: ["status"],
-      _count: { id: true },
-    }),
-
-    // Total subscribers (donors)
-    prisma.profile.count({ where: { role: "DONOR" } }),
-
-    // New this month
-    prisma.profile.count({
-      where: { role: "DONOR", createdAt: { gte: startOfMonth } },
-    }),
-
-    // New last month
-    prisma.profile.count({
-      where: {
-        role: "DONOR",
-        createdAt: { gte: startOfLastMonth, lte: endOfLastMonth },
+      {
+        id: "active_campaigns",
+        title: "Active Campaigns",
+        value: data.activeCampaigns,
+        icon: <Target className="h-6 w-6" />,
+        variant: "purple",
       },
-    }),
-
-    // Donations grouped by status
-    prisma.donation.groupBy({
-      by: ["status"],
-      _count: { id: true },
-      _sum: { amount: true },
-    }),
-
-    // Top 5 campaigns by current_amount
-    prisma.campaign.findMany({
-      orderBy: { currentAmount: "desc" },
-      take: 5,
-      include: { _count: { select: { donations: true } } },
-    }),
-
-    // 5 most recent completed donations
-    prisma.donation.findMany({
-      where: { status: DonationStatus.COMPLETED },
-      orderBy: { donatedAt: "desc" },
-      take: 5,
-      include: {
-        donor: { select: { fullName: true } },
-        campaign: { select: { title: true } },
+      {
+        id: "users",
+        title: "Platform Users",
+        value: data.totalUsers,
+        icon: <Users className="h-6 w-6" />,
+        variant: "amber",
       },
-    }),
-  ]);
+    ];
 
-  const thisMonth = Number(thisMonthRaised._sum.amount ?? 0);
-  const lastMonth = Number(lastMonthRaised._sum.amount ?? 0);
-  const raisedChange =
-    lastMonth === 0 ? 100 : Math.round(((thisMonth - lastMonth) / lastMonth) * 100);
-
-  const subChange =
-    lastMonthSubscribers === 0
-      ? 100
-      : Math.round(
-          ((thisMonthSubscribers - lastMonthSubscribers) / lastMonthSubscribers) * 100
-        );
-
-  const campaignCountMap = Object.fromEntries(
-    campaignStats.map((s) => [s.status, s._count.id])
-  );
-  const activeCampaigns = campaignCountMap[CampaignStatus.ACTIVE] ?? 0;
-  const totalCampaigns = Object.values(campaignCountMap).reduce((a, b) => a + b, 0);
-
-  const kpiCards = [
-    {
-      title: "Total Raised",
-      value: formatCurrency(Number(totalRaised._sum.amount ?? 0)),
-      sub: `${formatCurrency(thisMonth)} this month`,
-      change: raisedChange,
-      icon: <TrendingUp className="h-6 w-6" />,
-    },
-    {
-      title: "Active Campaigns",
-      value: activeCampaigns,
-      sub: `${totalCampaigns} total campaigns`,
-      change: null,
-      icon: <Target className="h-6 w-6" />,
-    },
-    {
-      title: "Total Subscribers",
-      value: subscriberCount,
-      sub: `+${thisMonthSubscribers} this month`,
-      change: subChange,
-      icon: <Users className="h-6 w-6" />,
-    },
-    {
-      title: "Total Donations",
-      value: donationsByStatus.reduce((a, b) => a + b._count.id, 0),
-      sub: `${donationsByStatus.find((d) => d.status === "COMPLETED")?._count.id ?? 0} completed`,
-      change: null,
-      icon: <HandCoins className="h-6 w-6" />,
-    },
-  ];
-
-  const chartData = donationsByStatus.map((d) => ({
-    status: d.status,
-    count: d._count.id,
-    amount: Number(d._sum.amount ?? 0),
-  }));
-
-  const topCampaignRows = topCampaigns.map((c) => ({
-    id: c.id,
-    title: c.title,
-    goalAmount: Number(c.goalAmount),
-    currentAmount: Number(c.currentAmount),
-    status: c.status as "DRAFT" | "ACTIVE" | "COMPLETED" | "CANCELLED",
-    donationCount: c._count.donations,
-  }));
-
-  const recentRows = recentDonations.map((d) => ({
-    id: d.id,
-    donorName: d.donor.fullName,
-    campaignTitle: d.campaign.title,
-    amount: Number(d.amount),
-    donatedAt: (d.donatedAt ?? d.createdAt).toISOString(),
-  }));
-
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Analytics</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Platform-wide performance metrics and insights.
-        </p>
-      </div>
-
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
-        {kpiCards.map((card) => (
-          <div
-            key={card.title}
-            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
-          >
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-500">{card.title}</p>
-                <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
-                  {card.value}
-                </h2>
-                <p className="mt-1 text-xs text-slate-500">{card.sub}</p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
-                {card.icon}
-              </div>
-            </div>
-            {card.change !== null && (
-              <div
-                className={`mt-3 flex items-center gap-1 text-xs font-medium ${
-                  card.change >= 0 ? "text-emerald-600" : "text-red-500"
-                }`}
-              >
-                {card.change >= 0 ? (
-                  <ArrowUpRight className="h-3.5 w-3.5" />
-                ) : (
-                  <ArrowDownRight className="h-3.5 w-3.5" />
-                )}
-                {Math.abs(card.change)}% vs last month
-              </div>
-            )}
+    return (
+      <div className="space-y-6">
+        {/* Header with Title, Range Filter & Export */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Platform Analytics</h1>
+            <p className="mt-1 text-sm text-slate-500">
+              Platform-wide performance, transaction velocity, and campaign metrics.
+            </p>
           </div>
-        ))}
-      </div>
 
-      {/* Charts + Tables row */}
-      <div className="grid gap-6 xl:grid-cols-5">
-        {/* Donations by status */}
-        <div className="xl:col-span-2">
-          <DonationsByStatusChart data={chartData} />
+          <div className="flex items-center gap-3">
+            <a
+              href={`/api/analytics/export?range=${range}`}
+              download
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 shadow-2xs hover:bg-slate-50 hover:border-slate-300 transition"
+            >
+              <Download className="h-3.5 w-3.5" />
+              <span>Export CSV</span>
+            </a>
+          </div>
         </div>
 
-        {/* Top campaigns */}
-        <div className="xl:col-span-3">
-          <TopCampaignsTable campaigns={topCampaignRows} />
+        {/* Date Filter Tabs */}
+        <div className="flex items-center gap-1 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-2xs">
+          <div className="flex items-center gap-1.5 px-3 text-xs font-semibold text-slate-400">
+            <Calendar className="h-3.5 w-3.5" />
+            <span>Range:</span>
+          </div>
+          {RANGE_TABS.map((tab) => (
+            <Link
+              key={tab.value}
+              href={`/analytics?range=${tab.value}`}
+              className={[
+                "whitespace-nowrap rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-colors",
+                range === tab.value
+                  ? "bg-emerald-600 text-white shadow-xs"
+                  : "text-slate-600 hover:bg-slate-100",
+              ].join(" ")}
+            >
+              {tab.label}
+            </Link>
+          ))}
+        </div>
+
+        <StatsGrid stats={stats} cols={4} />
+
+        {/* Charts & Breakdown */}
+        <div className="grid gap-6 lg:grid-cols-2">
+          <DonationsByStatusChart data={data.donationsByStatus} />
+          <TopCampaignsTable campaigns={data.topCampaigns} />
         </div>
       </div>
+    );
+  }
 
-      {/* Recent donations */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-lg font-semibold text-slate-900">
-          Recent Completed Donations
-        </h2>
-        {recentRows.length === 0 ? (
-          <p className="text-sm text-slate-500">No completed donations yet.</p>
-        ) : (
-          <ul className="divide-y divide-slate-100">
-            {recentRows.map((d) => (
-              <li
-                key={d.id}
-                className="flex items-center justify-between py-3 text-sm"
-              >
-                <div className="min-w-0">
-                  <p className="font-medium text-slate-900">{d.donorName}</p>
-                  <p className="truncate text-slate-500">{d.campaignTitle}</p>
-                </div>
-                <div className="ml-4 shrink-0 text-right">
-                  <p className="font-semibold text-emerald-600">
-                    {new Intl.NumberFormat("en-IN", {
-                      style: "currency",
-                      currency: "INR",
-                      maximumFractionDigits: 0,
-                    }).format(d.amount)}
-                  </p>
-                  <p className="text-xs text-slate-400">
-                    {new Date(d.donatedAt).toLocaleDateString("en-IN", {
-                      day: "numeric",
-                      month: "short",
-                    })}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+  // ── ORGANIZER VIEW ─────────────────────────────────────────────────────────
+  if (role === "ORGANIZER") {
+    const data = await getOrganizerAnalytics(user.id, dateRange);
+
+    const stats: StatItem[] = [
+      {
+        id: "raised",
+        title: "Total Raised",
+        value: formatCurrency(data.totalRaised),
+        icon: <TrendingUp className="h-6 w-6" />,
+        variant: "emerald",
+      },
+      {
+        id: "donations",
+        title: "Donations Received",
+        value: data.completedDonations,
+        icon: <HandCoins className="h-6 w-6" />,
+        variant: "blue",
+      },
+      {
+        id: "donors",
+        title: "Unique Donors",
+        value: data.uniqueDonors,
+        icon: <Users className="h-6 w-6" />,
+        variant: "purple",
+      },
+      {
+        id: "avg",
+        title: "Avg. Donation",
+        value: formatCurrency(data.averageDonation),
+        icon: <HeartHandshake className="h-6 w-6" />,
+        variant: "amber",
+      },
+    ];
+
+    return (
+      <div className="space-y-6">
+        {/* Header with Title, Range Filter & Export */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Campaign Analytics</h1>
+            <p className="mt-1 text-sm text-slate-500">
+              Track fundraising performance, donor demographics, and campaign milestones.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <a
+              href={`/api/analytics/export?range=${range}`}
+              download
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 shadow-2xs hover:bg-slate-50 hover:border-slate-300 transition"
+            >
+              <Download className="h-3.5 w-3.5" />
+              <span>Export CSV</span>
+            </a>
+          </div>
+        </div>
+
+        {/* Date Filter Tabs */}
+        <div className="flex items-center gap-1 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-2xs">
+          <div className="flex items-center gap-1.5 px-3 text-xs font-semibold text-slate-400">
+            <Calendar className="h-3.5 w-3.5" />
+            <span>Range:</span>
+          </div>
+          {RANGE_TABS.map((tab) => (
+            <Link
+              key={tab.value}
+              href={`/analytics?range=${tab.value}`}
+              className={[
+                "whitespace-nowrap rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-colors",
+                range === tab.value
+                  ? "bg-emerald-600 text-white shadow-xs"
+                  : "text-slate-600 hover:bg-slate-100",
+              ].join(" ")}
+            >
+              {tab.label}
+            </Link>
+          ))}
+        </div>
+
+        <StatsGrid stats={stats} cols={4} />
+
+        <div className="grid gap-6 lg:grid-cols-2">
+          <DonationsByStatusChart data={data.donationsByStatus} />
+          <TopCampaignsTable campaigns={data.topCampaigns} />
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  // ── DONOR VIEW ─────────────────────────────────────────────────────────────
+  redirect("/donations/history");
 }
