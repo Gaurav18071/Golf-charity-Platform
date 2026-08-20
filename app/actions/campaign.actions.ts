@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { CampaignStatus, CampaignCategory } from "@prisma/client";
+import { createNotification } from "@/features/notification/services/notification.service";
 
 async function requireAdminAuth() {
   const supabase = await createClient();
@@ -40,7 +41,7 @@ export async function approveCampaignAction(campaignId: string): Promise<{
 
     const campaign = await prisma.campaign.findFirst({
       where: isUuid ? { id: campaignId } : { slug: campaignId },
-      select: { id: true, slug: true, status: true },
+      select: { id: true, slug: true, title: true, organizerId: true, status: true },
     });
 
     if (!campaign) {
@@ -53,6 +54,14 @@ export async function approveCampaignAction(campaignId: string): Promise<{
         status: CampaignStatus.ACTIVE,
       },
     });
+
+    createNotification({
+      userId: campaign.organizerId,
+      type: "CAMPAIGN_APPROVED",
+      title: "Campaign Approved! 🚀",
+      message: `Your campaign "${campaign.title}" has been approved by admin and is now live to receive donations.`,
+      actionUrl: `/campaigns/${campaign.slug || campaign.id}`,
+    }).catch((e) => console.warn("Failed to dispatch campaign approval notification:", e));
 
     revalidatePath("/admin/campaign-approvals");
     revalidatePath("/campaigns");
@@ -85,7 +94,7 @@ export async function rejectCampaignAction(
 
     const campaign = await prisma.campaign.findFirst({
       where: isUuid ? { id: campaignId } : { slug: campaignId },
-      select: { id: true, slug: true },
+      select: { id: true, slug: true, title: true, organizerId: true },
     });
 
     if (!campaign) {
@@ -98,6 +107,16 @@ export async function rejectCampaignAction(
         status: CampaignStatus.CANCELLED,
       },
     });
+
+    createNotification({
+      userId: campaign.organizerId,
+      type: "CAMPAIGN_REJECTED",
+      title: "Campaign Moderation Update",
+      message: reason
+        ? `Your campaign "${campaign.title}" was not approved: "${reason}".`
+        : `Your campaign "${campaign.title}" was not approved by moderation.`,
+      actionUrl: `/campaigns/${campaign.id}/edit`,
+    }).catch((e) => console.warn("Failed to dispatch campaign rejection notification:", e));
 
     revalidatePath("/admin/campaign-approvals");
     revalidatePath("/campaigns");

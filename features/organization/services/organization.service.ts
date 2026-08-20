@@ -11,6 +11,7 @@
 import * as organizationRepo from "../repositories/organization.repository";
 import * as documentRepo from "../repositories/document.repository";
 import { prisma } from "@/lib/prisma";
+import { createNotification } from "@/features/notification/services/notification.service";
 import type {
   Organization,
   OrganizationWithDocuments,
@@ -433,6 +434,24 @@ export async function reviewOrganization(
       where: { organizationId, verificationStatus: "PENDING" },
       data: { verificationStatus: "APPROVED", reviewedAt: new Date() },
     });
+
+    createNotification({
+      userId: organization.profileId,
+      type: "ORGANIZATION_APPROVED",
+      title: "Organization Verified! 🎉",
+      message: `Your organization "${organization.name}" has been approved. You now have full access to create campaigns and receive donations.`,
+      actionUrl: "/organizer/organization",
+    }).catch((e) => console.warn("Failed to create org approval notification:", e));
+  } else if (verificationStatus === "REJECTED") {
+    createNotification({
+      userId: organization.profileId,
+      type: "ORGANIZATION_REJECTED",
+      title: "Organization Review Update",
+      message: adminNotes
+        ? `Your organization verification was not approved: "${adminNotes}".`
+        : `Your organization verification was not approved. Please review your submitted details.`,
+      actionUrl: "/organizer/organization",
+    }).catch((e) => console.warn("Failed to create org rejection notification:", e));
   }
 
   return updated;

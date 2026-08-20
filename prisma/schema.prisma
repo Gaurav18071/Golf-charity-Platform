@@ -100,6 +100,23 @@ enum PaymentStatus {
   REFUNDED
 }
 
+enum NotificationType {
+  ORGANIZATION_SUBMITTED
+  ORGANIZATION_APPROVED
+  ORGANIZATION_REJECTED
+  ORGANIZATION_CHANGES_REQUESTED
+  CAMPAIGN_SUBMITTED
+  CAMPAIGN_APPROVED
+  CAMPAIGN_REJECTED
+  CAMPAIGN_CANCELLED
+  DONATION_CREATED
+  DONATION_SUCCESSFUL
+  DONATION_FAILED
+  PAYMENT_SUCCESSFUL
+  PAYMENT_FAILED
+  SYSTEM_ANNOUNCEMENT
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // PROFILE
 // ─────────────────────────────────────────────────────────────────────────────
@@ -122,6 +139,8 @@ model Profile {
   campaigns Campaign[]
 
   donations Donation[]
+
+  notifications Notification[]
 
   @@index([role])
   @@index([createdAt])
@@ -484,3 +503,32 @@ model Payment {
   @@index([processedAt])
   @@map("payments")
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NOTIFICATIONS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Notification {
+  id String @id @default(uuid()) @db.Uuid
+
+  userId String @map("user_id") @db.Uuid
+  user   Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type NotificationType @default(SYSTEM_ANNOUNCEMENT)
+
+  title   String
+  message String @db.Text
+
+  isRead Boolean @default(false) @map("is_read")
+
+  actionUrl String? @map("action_url")
+  metadata  Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
