@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CampaignImagePicker } from "./CampaignImagePicker";
+import { AiCampaignAssistant } from "./AiCampaignAssistant";
 
 const schema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters"),
@@ -153,9 +154,18 @@ export default function CreateCampaignForm() {
             {errors.coverImageUrl && <p className="text-xs text-destructive mt-1">{errors.coverImageUrl.message}</p>}
           </div>
 
-          {/* Description */}
-          <div className="sm:col-span-2 space-y-1.5">
-            <Label htmlFor="description">Campaign Summary / Short Description</Label>
+          {/* Description with AI Assistant */}
+          <div className="sm:col-span-2 space-y-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <Label htmlFor="description">Campaign Summary / Short Description</Label>
+              <AiCampaignAssistant
+                title={watch("title")}
+                category={watch("category")}
+                description={watch("description") || watch("title")}
+                onApplyDescription={(text) => setValue("description", text, { shouldValidate: true })}
+                onApplyStory={(text) => setValue("story", text, { shouldValidate: true })}
+              />
+            </div>
             <textarea
               id="description"
               rows={3}

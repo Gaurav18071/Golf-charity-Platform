@@ -4,9 +4,17 @@ import { createClient } from "@/lib/supabase/client";
  * Format raw Supabase authentication error messages into clean user-friendly text.
  */
 export function formatAuthError(error: unknown): string {
-  if (typeof error === "string") return error;
+  if (typeof error === "string") {
+    if (error.includes("Failed to fetch") || error.includes("fetch failed")) {
+      return "Unable to connect to the authentication server. Please check your internet connection or verify your Supabase project status.";
+    }
+    return error;
+  }
   if (error && typeof error === "object" && "message" in error) {
     const message = String((error as { message: unknown }).message);
+    if (message.includes("Failed to fetch") || message.includes("fetch failed") || message.includes("NetworkError")) {
+      return "Unable to connect to the authentication server. Please check your internet connection or verify your Supabase project status.";
+    }
     if (message.includes("Invalid login credentials")) {
       return "Invalid email or password. Please check your credentials and try again.";
     }

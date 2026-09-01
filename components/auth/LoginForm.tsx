@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 
 import { loginSchema } from "@/schemas/auth";
 import type { LoginFormData } from "@/types/auth";
-import { signIn } from "@/lib/auth";
+import { signIn, formatAuthError } from "@/lib/auth";
 import { AUTH_PLACEHOLDERS, AUTH_TEXT } from "@/constants/auth";
 
 import { Button } from "@/components/ui/button";
@@ -46,11 +46,7 @@ export default function LoginForm() {
       router.push("/dashboard");
       router.refresh();
     } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError("Something went wrong. Please try again.");
-      }
+      setError(formatAuthError(err));
     } finally {
       setLoading(false);
     }
