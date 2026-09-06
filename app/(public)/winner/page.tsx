@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/client";
 
 type Score = {
   id: string;
@@ -18,6 +18,7 @@ export default function Winner() {
     const currentMonth = new Date().getMonth() + 1;
     const currentYear = new Date().getFullYear();
 
+    const supabase = createClient();
     const { data, error } = await supabase
       .from("scores")
       .select("*")

@@ -83,12 +83,6 @@ export function DocumentManager({
   const documents = useDocuments({
     organizationId,
     autoFetch: true,
-    onLoad: (docs) => {
-      console.log(`Loaded ${docs.length} documents`);
-    },
-    onDelete: (id) => {
-      console.log(`Document ${id} deleted`);
-    },
   });
 
   // ── Handlers ───────────────────────────────────────────────────────────────
@@ -146,9 +140,6 @@ export function DocumentManager({
           <DocumentUploader
             organizationId={organizationId}
             onSuccess={handleUploadSuccess}
-            onError={(error) => {
-              console.error("Upload failed:", error);
-            }}
           />
         </div>
       )}

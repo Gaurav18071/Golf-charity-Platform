@@ -89,8 +89,7 @@ export async function signUp(
           role,
         }),
       });
-    } catch (err) {
-      console.error("Failed to create profile:", err);
+    } catch {
       // Don't throw - auth succeeded, profile creation can be retried
     }
   }
@@ -147,22 +146,7 @@ export async function getCurrentUser() {
   return user;
 }
 
-/**
- * Get current session
- */
-export async function getSession() {
-  const supabase = createClient();
-  const {
-    data: { session },
-    error,
-  } = await supabase.auth.getSession();
 
-  if (error) {
-    return null;
-  }
-
-  return session;
-}
 
 /**
  * Send password reset email

@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 
 type Score = {
   id: string;
@@ -8,6 +8,7 @@ type Score = {
 };
 
 export default async function Leaderboard() {
+  const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("scores")

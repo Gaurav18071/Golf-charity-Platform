@@ -29,9 +29,11 @@ export async function sendNotificationEmail(options: SendEmailOptions): Promise<
     const smtpHost = process.env.SMTP_HOST;
 
     if (!resendApiKey && !smtpHost) {
-      console.log(
-        `[EmailService:Simulated] To: ${options.to} | Subject: "${options.subject}" | Title: "${options.title}"`
-      );
+      if (process.env.NODE_ENV !== "production") {
+        console.log(
+          `[EmailService:Simulated] To: ${options.to} | Subject: "${options.subject}" | Title: "${options.title}"`
+        );
+      }
       return { success: true };
     }
 
