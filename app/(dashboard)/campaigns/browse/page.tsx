@@ -4,6 +4,8 @@ import { CampaignStatus } from "@prisma/client";
 import { CampaignCardWidget } from "@/components/dashboard/widgets";
 import type { CampaignWidgetItem } from "@/components/dashboard/widgets";
 import SortSelect from "@/components/dashboard/campaigns/SortSelect";
+import { AiCampaignSearch } from "@/components/dashboard/campaigns/AiCampaignSearch";
+import { CampaignRecommendations } from "@/components/dashboard/campaigns/CampaignRecommendations";
 
 export const dynamic = "force-dynamic";
 
@@ -80,7 +82,22 @@ export default async function BrowseCampaignsPage({ searchParams }: PageProps) {
         </p>
       </div>
 
-      {/* Search + Filters bar */}
+      {/* AI-powered natural language search */}
+      <AiCampaignSearch />
+
+      {/* Personalized recommendations (hidden for unauthenticated users) */}
+      <CampaignRecommendations title="Recommended Campaigns" />
+
+      {/* Divider */}
+      <div className="flex items-center gap-3" id="browse-search">
+        <div className="flex-1 border-t border-slate-200" />
+        <span className="shrink-0 text-xs font-semibold uppercase tracking-wide text-slate-400">
+          Or browse all campaigns
+        </span>
+        <div className="flex-1 border-t border-slate-200" />
+      </div>
+
+      {/* Standard Search + Filters bar */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {/* Search */}
         <form method="GET" className="relative w-full sm:max-w-sm">

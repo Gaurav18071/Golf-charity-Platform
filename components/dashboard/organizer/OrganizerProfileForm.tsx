@@ -11,7 +11,6 @@ import { createOrganizationDraftAction } from "@/features/organization/actions/o
 import { OrganizationType } from "@prisma/client";
 
 interface OrganizerProfileFormProps {
-  userId: string;
   initialData: {
     fullName: string;
     avatarUrl: string | null;
@@ -19,7 +18,6 @@ interface OrganizerProfileFormProps {
 }
 
 export default function OrganizerProfileForm({
-  userId,
   initialData,
 }: OrganizerProfileFormProps) {
   const router = useRouter();

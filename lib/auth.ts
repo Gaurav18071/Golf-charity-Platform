@@ -146,8 +146,6 @@ export async function getCurrentUser() {
   return user;
 }
 
-
-
 /**
  * Send password reset email
  */

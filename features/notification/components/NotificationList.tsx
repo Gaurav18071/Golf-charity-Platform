@@ -13,7 +13,6 @@ import {
   HandCoins,
   Target,
   Building2,
-  AlertCircle,
   ExternalLink,
   Loader2,
 } from "lucide-react";

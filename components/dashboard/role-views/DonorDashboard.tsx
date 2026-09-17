@@ -17,6 +17,7 @@ import {
   type QuickAction,
   type RecentDonationItem,
 } from "@/components/dashboard/widgets";
+import { CampaignRecommendations } from "@/components/dashboard/campaigns/CampaignRecommendations";
 
 interface DonorDashboardProps {
   userName: string;
@@ -150,6 +151,9 @@ export function DonorDashboard({
           />
         </div>
       </div>
+
+      {/* Personalized Recommendations */}
+      <CampaignRecommendations title="Recommended for You" />
     </div>
   );
 }

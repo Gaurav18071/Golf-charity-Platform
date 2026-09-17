@@ -54,7 +54,6 @@ export default async function OrganizerProfilePage() {
       </div>
 
       <OrganizerProfileForm
-        userId={user.id}
         initialData={{
           fullName: profile?.fullName ?? user.user_metadata?.full_name ?? "",
           avatarUrl: profile?.avatarUrl ?? null,

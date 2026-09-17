@@ -43,3 +43,82 @@ ${input.impactGoal ? `Stated Impact Goal: ${input.impactGoal}` : ""}
 Please generate the structured JSON enhancement according to your system instructions.
 `.trim();
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PHASE 13 — Campaign Search Intent Extraction Prompts
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * System prompt instructing the AI to extract a structured search intent
+ * from a donor's natural-language query.
+ *
+ * CRITICAL RULES:
+ * - AI must NOT invent campaign names, IDs, or data.
+ * - AI must ONLY output the search intent JSON — nothing else.
+ * - AI must restrict categories to the allowed enum values.
+ */
+export const AI_SEARCH_SYSTEM_PROMPT = `
+You are a campaign search intent extractor for the Golf Charity Platform.
+Your ONLY job is to convert a donor's natural-language search query into a structured JSON search intent.
+
+STRICT RULES:
+1. Return ONLY a valid JSON object. No explanation, no markdown, no preamble.
+2. NEVER invent campaign names, IDs, statistics, or any campaign data.
+3. NEVER use status values other than the allowed ones.
+4. ONLY use these category values (case-sensitive):
+   EDUCATION, HEALTHCARE, ENVIRONMENT, ANIMAL_WELFARE, DISASTER_RELIEF,
+   FOOD, SPORTS, COMMUNITY, CHILD_WELFARE, ELDERLY_SUPPORT, OTHER
+5. If a field cannot be determined from the query, omit it (do not use null).
+6. Keywords should be simple meaningful words, maximum 5.
+7. Amounts are in Indian Rupees (₹). Convert written amounts (e.g. "1 lakh" = 100000).
+8. sortBy must be one of: newest, raised, oldest — or omit it.
+
+OUTPUT SCHEMA (JSON):
+{
+  "category": "EDUCATION",
+  "location": "Delhi",
+  "keywords": ["children", "school"],
+  "minAmount": 500,
+  "maxAmount": 5000,
+  "sortBy": "newest"
+}
+
+All fields are optional. Return {} if nothing specific can be extracted.
+`.trim();
+
+/**
+ * Builds the user prompt for search intent extraction.
+ * Sanitized — query is already cleaned before this is called.
+ */
+export function buildSearchUserPrompt(query: string): string {
+  return `Extract a structured search intent from this donor query:\n\n"${query}"\n\nReturn ONLY the JSON object.`;
+}
+
+/**
+ * Build a safe, human-readable summary of what the AI search found.
+ * Uses only facts from the intent and count — never invents campaign data.
+ */
+export function buildSearchSummary(
+  query: string,
+  intent: { category?: string; location?: string; keywords?: string[] },
+  count: number
+): string {
+  const parts: string[] = [];
+
+  if (intent.category) {
+    parts.push(intent.category.replace(/_/g, " ").toLowerCase());
+  }
+  if (intent.location) {
+    parts.push(`in ${intent.location}`);
+  }
+  if (intent.keywords?.length) {
+    parts.push(`matching "${intent.keywords.slice(0, 2).join(", ")}"`);
+  }
+
+  const description = parts.length > 0 ? parts.join(" ") : `"${query}"`;
+
+  if (count === 0) return `No active campaigns found for ${description}.`;
+  if (count === 1) return `Found 1 active campaign for ${description}.`;
+  return `Found ${count} active campaigns for ${description}.`;
+}
+
