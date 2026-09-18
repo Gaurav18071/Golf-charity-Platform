@@ -120,10 +120,12 @@ export default function Footer() {
                 type="email"
                 placeholder="Enter your email"
                 className="w-full rounded-xl border border-emerald-800 bg-[#072B1A] px-3.5 py-2.5 text-xs text-white placeholder-emerald-400/60 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                suppressHydrationWarning
               />
               <button
                 type="submit"
                 className="rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-500 transition shadow-xs"
+                suppressHydrationWarning
               >
                 Subscribe
               </button>

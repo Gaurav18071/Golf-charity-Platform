@@ -14,7 +14,7 @@ export interface UseProfileResult {
   /** The current user's profile. Null until loaded or if unauthenticated. */
   profile: Profile | null;
 
-  /** True while the initial profile fetch is in progress. */
+  /** True while the initial pro file fetch is in progress. */
   loading: boolean;
 
   /** Error message if the fetch failed. Null otherwise. */
