@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CampaignImagePicker } from "./CampaignImagePicker";
 import { AiCampaignAssistant } from "./AiCampaignAssistant";
+import { OrganizerAiAssistant } from "./OrganizerAiAssistant";
 
 const schema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters"),
@@ -58,6 +59,13 @@ export default function CreateCampaignForm() {
   } = useForm<FormData>({ resolver: zodResolver(schema) });
 
   const coverImageUrl = watch("coverImageUrl");
+  const watchedTitle = watch("title");
+  const watchedCategory = watch("category");
+  const watchedDescription = watch("description");
+  const watchedStory = watch("story");
+  const watchedLocation = watch("location");
+  const watchedGoalAmount = watch("goalAmount");
+  const watchedEndDate = watch("endDate");
 
   const onSubmit = async (data: FormData) => {
     try {
@@ -193,6 +201,24 @@ export default function CreateCampaignForm() {
           {errors.story && <p className="text-xs text-destructive">{errors.story.message}</p>}
         </div>
       </section>
+
+      {/* AI Content Assistant — organizer controls all apply actions */}
+      <OrganizerAiAssistant
+        context={{
+          title: watchedTitle,
+          category: watchedCategory,
+          description: watchedDescription,
+          story: watchedStory,
+          location: watchedLocation,
+          goalAmount: watchedGoalAmount ? Number(watchedGoalAmount) : undefined,
+          endDate: watchedEndDate,
+        }}
+        onApplyContent={(field, content) => {
+          if (field === "description") setValue("description", content, { shouldValidate: true });
+          if (field === "story") setValue("story", content, { shouldValidate: true });
+        }}
+        onApplyTitle={(title) => setValue("title", title, { shouldValidate: true })}
+      />
 
       {/* Section: Beneficiary */}
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
