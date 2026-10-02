@@ -60,7 +60,7 @@ export default async function DashboardPage() {
             user.user_metadata?.name ||
             user.email?.split("@")[0] ||
             "User",
-          role: (user.user_metadata?.role as any) || "DONOR",
+          role: (user.user_metadata?.role as string | undefined) ?? "DONOR",
         },
       });
     }
@@ -73,7 +73,7 @@ export default async function DashboardPage() {
   const role = profile?.role ?? (user.user_metadata?.role as string) ?? "DONOR";
 
   // ── Shared: recent donations for current user ─────────────────────────────
-  let sharedDonations: any[] = [];
+  let sharedDonations: Awaited<ReturnType<typeof prisma.donation.findMany>> = [];
   if (isUuid) {
     try {
       sharedDonations = await prisma.donation.findMany({
@@ -239,7 +239,7 @@ export default async function DashboardPage() {
       ? calculateCompletionPercentage(organization, docCount)
       : 100;
 
-    let orgDonations: any[] = [];
+    let orgDonations: Awaited<ReturnType<typeof prisma.donation.findMany>> = [];
     if (isUuid) {
       try {
         orgDonations = await prisma.donation.findMany({

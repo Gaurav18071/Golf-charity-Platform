@@ -58,7 +58,7 @@ export interface OrganizerAnalyticsSummary {
 
 function buildDateFilter(range?: DateRangeFilter) {
   if (!range?.startDate && !range?.endDate) return {};
-  const filter: any = {};
+  const filter: Record<string, Date> = {};
   if (range.startDate) filter.gte = range.startDate;
   if (range.endDate) filter.lte = range.endDate;
   return filter;

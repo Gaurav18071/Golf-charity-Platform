@@ -20,7 +20,7 @@ export interface CreateNotificationInput {
   title: string;
   message: string;
   actionUrl?: string | null;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface NotificationDTO {

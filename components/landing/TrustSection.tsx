@@ -89,10 +89,10 @@ export default function TrustSection() {
         <div className="mx-auto mt-16 max-w-3xl text-center">
 
           <p className="text-xl font-medium text-slate-800">
-            Together, we're building more than a golf platform—
+            Together, we&apos;re building more than a golf platform—
             <span className="text-emerald-700">
               {" "}
-              we're creating a community that plays with purpose.
+              we&apos;re creating a community that plays with purpose.
             </span>
           </p>
 

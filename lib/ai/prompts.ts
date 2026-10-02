@@ -423,3 +423,127 @@ export function buildOrganizerUserPrompt(
   lines.push("\nReturn ONLY the JSON object as specified in your instructions.");
   return lines.join("\n");
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PHASE 15 — AI Impact & Search Assistant Prompts
+// ─────────────────────────────────────────────────────────────────────────────
+
+import type { GroundedCampaignContext } from "./impact-types";
+
+/**
+ * System prompt for the Campaign Impact Assistant.
+ *
+ * GROUNDING CONTRACT:
+ * - The AI receives only pre-retrieved, server-validated campaign data.
+ * - The AI must never invent facts not present in the provided context.
+ * - The AI must clearly distinguish verified platform data from
+ *   organizer-provided claims and unavailable information.
+ */
+export const AI_IMPACT_ASSISTANT_SYSTEM_PROMPT = `
+You are the Campaign Impact Assistant for the Golf Charity Platform.
+Your role is to help donors and visitors understand campaign information based ONLY on the verified data provided to you.
+
+CRITICAL GROUNDING RULES — THESE ARE ABSOLUTE:
+1. Answer ONLY using the campaign data provided in the context below. NEVER use general knowledge to fill gaps.
+2. NEVER invent, estimate, or extrapolate:
+   - Beneficiary counts or names not in the data
+   - Statistics, percentages (except those calculated from provided numbers)
+   - Testimonials, quotes, or success stories
+   - Impact outcomes not explicitly stated
+   - Government certifications, tax exemptions, or regulatory approvals
+   - Medical, legal, or financial claims
+3. Clearly distinguish between:
+   - VERIFIED: Financial figures (goalAmount, currentAmount), dates, status — from platform database
+   - ORGANIZER CLAIM: story, description, beneficiaryStory — provided by organizer, not independently verified
+   - UNAVAILABLE: Any information not present in the provided context
+4. When information is missing, respond clearly: "The campaign page does not currently provide this information."
+   Do NOT guess or substitute general charity knowledge.
+5. Never initiate, process, or discuss specific donation transactions.
+6. Never expose internal IDs, adminNotes, payment details, or private user data.
+7. Return ONLY a valid JSON object. No markdown, no preamble, no extra text.
+
+CONFIDENCE LEVELS:
+- "verified": Answer derived from platform database fields (amounts, dates, status, org verification)
+- "organizer_claim": Answer derived from organizer-written text (story, description, beneficiaryStory)
+- "unavailable": The requested information is not in the provided campaign data
+
+OUTPUT SCHEMA (JSON):
+{
+  "answer": "Your response to the donor's question. Be helpful, honest, and clear. Plain text only.",
+  "confidence": "verified" | "organizer_claim" | "unavailable",
+  "disclaimer": "Short note when confidence is organizer_claim or unavailable. Omit for verified answers.",
+  "suggestedQuestions": ["Optional follow-up question 1", "Optional follow-up question 2"]
+}
+`.trim();
+
+/**
+ * Builds the user prompt with the grounded campaign context.
+ * Only includes public, safe fields — never adminNotes, payment data, or tokens.
+ */
+export function buildImpactUserPrompt(
+  question: string,
+  ctx: GroundedCampaignContext
+): string {
+  const lines: string[] = [
+    "CAMPAIGN DATA (use only these facts — this is the source of truth):",
+    "",
+    `Title: ${ctx.title}`,
+    `Category: ${ctx.category}`,
+    `Status: ${ctx.status}${ctx.isActive ? " (accepting donations)" : " (not accepting donations)"}`,
+  ];
+
+  if (ctx.location) lines.push(`Location: ${ctx.location}`);
+  lines.push(`Fundraising Goal: ₹${ctx.goalAmount.toLocaleString("en-IN")}`);
+  lines.push(`Amount Raised: ₹${ctx.currentAmount.toLocaleString("en-IN")} (${ctx.percentFunded}% funded)`);
+  lines.push(`Remaining Amount: ₹${ctx.remainingAmount.toLocaleString("en-IN")}`);
+  lines.push(`Donors: ${ctx.donorCount}`);
+  lines.push(`End Date: ${ctx.endDate}`);
+  lines.push(`Days Remaining: ${ctx.daysLeft}`);
+  lines.push("");
+
+  lines.push("Organization:");
+  lines.push(`  Name: ${ctx.organizationName}`);
+  lines.push(`  Type: ${ctx.organizationType}`);
+  if (ctx.organizationCity) lines.push(`  Location: ${ctx.organizationCity}, ${ctx.organizationState ?? ""}`);
+  lines.push(`  Platform Verification Status: ${ctx.organizationVerified ? "VERIFIED by Golf Charity Platform" : "Not yet verified"}`);
+  if (ctx.organizationWebsite) lines.push(`  Website: ${ctx.organizationWebsite}`);
+  lines.push("");
+
+  if (ctx.hasDescription) {
+    lines.push("Campaign Description (organizer-provided):");
+    lines.push(ctx.shortDescription);
+    lines.push("");
+  }
+
+  if (ctx.hasStory && ctx.story) {
+    // Truncate long stories to prevent prompt bloat — max 1500 chars
+    const storyExcerpt = ctx.story.length > 1500
+      ? ctx.story.slice(0, 1500) + "... [content continues on campaign page]"
+      : ctx.story;
+    lines.push("Campaign Story (organizer-provided, NOT independently verified):");
+    lines.push(storyExcerpt);
+    lines.push("");
+  }
+
+  if (ctx.hasBeneficiaryInfo) {
+    if (ctx.beneficiaryName) lines.push(`Beneficiary Name (organizer-provided): ${ctx.beneficiaryName}`);
+    if (ctx.beneficiaryStory) {
+      const b = ctx.beneficiaryStory.length > 800
+        ? ctx.beneficiaryStory.slice(0, 800) + "..."
+        : ctx.beneficiaryStory;
+      lines.push(`Beneficiary Information (organizer-provided, NOT independently verified): ${b}`);
+    }
+    lines.push("");
+  }
+
+  lines.push("DATA AVAILABILITY NOTES:");
+  if (!ctx.hasStory) lines.push("- No campaign story provided by organizer.");
+  if (!ctx.hasBeneficiaryInfo) lines.push("- No beneficiary information provided.");
+  lines.push("");
+
+  lines.push(`DONOR'S QUESTION: "${question}"`);
+  lines.push("");
+  lines.push("Answer the question using ONLY the data above. Return ONLY the JSON object.");
+
+  return lines.join("\n");
+}

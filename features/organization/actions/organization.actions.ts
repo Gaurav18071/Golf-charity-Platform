@@ -57,11 +57,11 @@ function formatZodErrorMessage(error: unknown, fallback: string): string {
     return error.issues.map((i) => i.message).join(". ");
   }
   if (error && typeof error === "object") {
-    if ("issues" in error && Array.isArray((error as any).issues)) {
-      return (error as any).issues.map((i: any) => i.message).join(". ");
+    if ("issues" in error && Array.isArray((error as { issues: unknown[] }).issues)) {
+      return (error as { issues: { message: string }[] }).issues.map((i) => i.message).join(". ");
     }
-    if ("errors" in error && Array.isArray((error as any).errors)) {
-      return (error as any).errors.map((e: any) => e.message || String(e)).join(". ");
+    if ("errors" in error && Array.isArray((error as { errors: unknown[] }).errors)) {
+      return (error as { errors: { message?: string }[] }).errors.map((e) => e.message || String(e)).join(". ");
     }
   }
   if (error instanceof Error) {
@@ -69,7 +69,7 @@ function formatZodErrorMessage(error: unknown, fallback: string): string {
       try {
         const parsed = JSON.parse(error.message);
         if (Array.isArray(parsed)) {
-          return parsed.map((item: any) => item.message || String(item)).join(". ");
+          return parsed.map((item: { message?: string }) => item.message || String(item)).join(". ");
         }
       } catch {
         // ignore JSON parse error
@@ -217,7 +217,7 @@ export async function getMyOrganizationAction(
 
     return {
       success: true,
-      data: { organization: organization as any }, // Type assertion due to conditional include
+      data: { organization: organization as unknown }, // Type assertion due to conditional include
     };
   } catch (error) {
     console.error("[getMyOrganizationAction] Error:", error);
@@ -266,7 +266,7 @@ export async function getOrganizationByIdAction(
 
     return {
       success: true,
-      data: { organization: organization as any },
+      data: { organization: organization as unknown },
     };
   } catch (error) {
     console.error("[getOrganizationByIdAction] Error:", error);

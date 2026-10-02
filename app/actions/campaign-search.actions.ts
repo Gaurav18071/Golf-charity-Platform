@@ -167,7 +167,7 @@ export async function aiCampaignSearchAction(
 
     // 3. Build and execute Prisma query
     //    Database is the ONLY source of truth — AI never invents campaigns
-    const campaigns = await (prisma.campaign.findMany as Function)({
+    const campaigns = await (prisma.campaign.findMany as typeof prisma.campaign.findMany)({
       where: buildPrismaWhere(intent),
       orderBy: buildOrderBy(intent.sortBy),
       take: 12,
@@ -263,7 +263,7 @@ export async function getCampaignRecommendationsAction(): Promise<CampaignRecomm
 
     if (donatedCategories.length > 0) {
       // 3a. Candidate set: campaigns in categories the donor has supported
-      campaigns = await (prisma.campaign.findMany as Function)({
+      campaigns = await (prisma.campaign.findMany as typeof prisma.campaign.findMany)({
         where: {
           status: CampaignStatus.ACTIVE,
           deletedAt: null,
@@ -285,7 +285,7 @@ export async function getCampaignRecommendationsAction(): Promise<CampaignRecomm
       reason = `Based on your previous donations to ${categoryLabels} campaigns.`;
     } else {
       // 3b. No history → newest ACTIVE campaigns (cold start)
-      campaigns = await (prisma.campaign.findMany as Function)({
+      campaigns = await (prisma.campaign.findMany as typeof prisma.campaign.findMany)({
         where: {
           status: CampaignStatus.ACTIVE,
           deletedAt: null,

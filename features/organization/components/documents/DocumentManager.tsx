@@ -91,7 +91,7 @@ export function DocumentManager({
     documents.refresh();
   };
 
-  const handlePreview = (doc: any) => {
+  const handlePreview = (doc: { id: string; originalFileName: string; mimeType: string }) => {
     setPreviewDocument({
       id: doc.id,
       fileName: doc.originalFileName,

@@ -123,7 +123,7 @@ export default async function VerificationStatusPage() {
               </li>
               <li className="flex items-start gap-2">
                 <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
-                You'll receive an email notification when the decision is made.
+                You&apos;ll receive an email notification when the decision is made.
               </li>
               <li className="flex items-start gap-2">
                 <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />

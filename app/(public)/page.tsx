@@ -8,7 +8,7 @@ import CTASection from "@/components/landing/CTASection";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  let campaigns: any[] = [];
+  let campaigns: Awaited<ReturnType<typeof prisma.campaign.findMany>> = [];
 
   try {
     const dbCampaigns = await prisma.campaign.findMany({

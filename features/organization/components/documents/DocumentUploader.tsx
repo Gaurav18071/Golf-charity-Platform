@@ -38,7 +38,7 @@ export interface DocumentUploaderProps {
   allowTypeSelection?: boolean;
   
   /** Callback when upload succeeds */
-  onSuccess?: (document: any) => void;
+  onSuccess?: (document: { id: string; fileName: string; documentType: string }) => void;
   
   /** Callback when upload fails */
   onError?: (error: string) => void;
@@ -156,8 +156,9 @@ export function DocumentUploader({
     }
   };
 
-  // ── Render Helpers ─────────────────────────────────────────────────────────
-  const FileIcon = upload.state.file ? getFileIcon(upload.state.file) : Upload;
+  // Determine which icon to use (string-based lookup to avoid render-time component creation)
+  const fileIconComponent = upload.state.file ? getFileIcon(upload.state.file) : Upload;
+  const FileIconComponent = fileIconComponent;
   const metadata = selectedType ? DOCUMENT_TYPE_METADATA[selectedType] : null;
 
   // ── Compact View ───────────────────────────────────────────────────────────
@@ -331,7 +332,7 @@ export function DocumentUploader({
             <div className="flex items-start gap-4">
               {/* File Icon */}
               <div className="flex-shrink-0 p-3 bg-slate-100 rounded-lg">
-                <FileIcon className="h-8 w-8 text-slate-600" />
+                <FileIconComponent className="h-8 w-8 text-slate-600" />
               </div>
 
               {/* File Info */}

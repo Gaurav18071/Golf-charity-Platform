@@ -2,8 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { CreateNotificationInput, NotificationDTO } from "../types/notification.types";
 import { sendNotificationEmail } from "@/features/email/services/email.service";
 
-// Safe delegate to prevent Windows DLL lock IDE warnings
-const db = prisma as any;
+// Use prisma directly — safe to call from server-side only
+const db = prisma;
 
 /**
  * Creates an in-app notification and dispatches a background notification email.
@@ -88,7 +88,7 @@ export async function getUserNotifications(
       take: limit,
     });
 
-    return items.map((n: any) => ({
+    return items.map((n: { id: string; userId: string; type: string; title: string; message: string; isRead: boolean; actionUrl: string | null; createdAt: Date }) => ({
       id: n.id,
       userId: n.userId,
       type: n.type,

@@ -28,13 +28,13 @@ export async function GET(request: Request) {
     const rangeParam = searchParams.get("range") || "all";
     const dateRange = parseDateRange(rangeParam);
 
-    const dateFilter: any = {};
+    const dateFilter: Record<string, Date> = {};
     if (dateRange.startDate) dateFilter.gte = dateRange.startDate;
     if (dateRange.endDate) dateFilter.lte = dateRange.endDate;
 
     const dateWhere = Object.keys(dateFilter).length > 0 ? { createdAt: dateFilter } : {};
 
-    let donations: any[] = [];
+    let donations: Awaited<ReturnType<typeof prisma.donation.findMany>> = [];
 
     if (profile.role === "ADMIN") {
       donations = await prisma.donation.findMany({

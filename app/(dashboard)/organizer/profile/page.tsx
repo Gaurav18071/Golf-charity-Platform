@@ -4,6 +4,7 @@ import { ShieldCheck } from "lucide-react";
 import OrganizerProfileForm from "@/components/dashboard/organizer/OrganizerProfileForm";
 import { getOrganizationByProfileId } from "@/features/organization/services/organization.service";
 import { OrganizationDetailsView } from "@/components/dashboard/organizer/OrganizationDetailsView";
+import type { OrganizationWithDocuments } from "@/features/organization/types/organization.types";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,7 @@ export default async function OrganizerProfilePage() {
   const organization = await getOrganizationByProfileId(user.id, true);
 
   if (organization) {
-    return <OrganizationDetailsView organization={organization as any} />;
+    return <OrganizationDetailsView organization={organization as unknown as OrganizationWithDocuments} />;
   }
 
   return (

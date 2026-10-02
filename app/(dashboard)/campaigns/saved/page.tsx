@@ -54,7 +54,7 @@ export default async function SavedCampaignsPage() {
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Saved Campaigns</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Campaigns you've bookmarked for later.
+          Campaigns you&apos;ve bookmarked for later.
         </p>
       </div>
 

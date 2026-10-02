@@ -20,6 +20,7 @@ import { DonationForm } from "@/features/donation/components/DonationForm";
 import { getCampaignDonationStats } from "@/features/donation/services/donation.service";
 import { SaveCampaignButton } from "@/components/dashboard/campaigns/SaveCampaignButton";
 import { CampaignApprovalButtons } from "@/components/dashboard/admin/CampaignApprovalButtons";
+import { CampaignImpactAssistant } from "@/components/dashboard/campaigns/CampaignImpactAssistant";
 
 export const dynamic = "force-dynamic";
 
@@ -240,6 +241,12 @@ export default async function CampaignDetailPage({ params }: PageProps) {
               {campaign.story || campaign.description}
             </div>
           </div>
+
+          {/* AI Impact Assistant — grounded on verified campaign data */}
+          <CampaignImpactAssistant
+            campaignId={campaign.slug || campaign.id}
+            campaignTitle={campaign.title}
+          />
 
           {/* Beneficiary Details */}
           {(campaign.beneficiaryName || campaign.beneficiaryStory) && (

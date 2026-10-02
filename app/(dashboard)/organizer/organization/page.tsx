@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { requireAuth } from "@/features/organization/utils/organization-guards";
 import { getOrganizationByProfileId } from "@/features/organization/services/organization.service";
 import { OrganizationDetailsView } from "@/components/dashboard/organizer/OrganizationDetailsView";
+import type { OrganizationWithDocuments } from "@/features/organization/types/organization.types";
 import Link from "next/link";
 import { Building2, PlusCircle } from "lucide-react";
 
@@ -41,5 +42,5 @@ export default async function OrganizationOverviewPage() {
     );
   }
 
-  return <OrganizationDetailsView organization={organization as any} />;
+  return <OrganizationDetailsView organization={organization as unknown as OrganizationWithDocuments} />;
 }

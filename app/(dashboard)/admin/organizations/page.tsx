@@ -9,6 +9,7 @@ import {
   getOrganizationsPendingReview,
 } from "@/features/organization/services/organization.service";
 import { VERIFICATION_STATUS_COLORS } from "@/features/organization/constants/organization.constants";
+import { VerificationStatus } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -59,7 +60,7 @@ export default async function AdminOrganizationsPage({
 
   const [reviewRows, pendingReview, draftCount, rejectedCount, approvedCount] = await Promise.all([
     getOrganizationsForAdminReview({
-      status: normalizedStatus as any,
+      status: normalizedStatus as VerificationStatus | undefined,
       search: query || undefined,
       page: 1,
       pageSize: 50,
