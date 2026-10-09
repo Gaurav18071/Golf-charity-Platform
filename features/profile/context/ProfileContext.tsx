@@ -6,7 +6,7 @@ import {
   useMemo,
   type ReactNode,
 } from "react";
-import { useProfile } from "@/hooks/useProfile";
+import { useProfile } from "@/features/profile/hooks/useProfile";
 import type { Profile } from "@/features/profile/profile.types";
 
 // ─────────────────────────────────────────────────────────────────────────────

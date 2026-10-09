@@ -6,7 +6,7 @@ import {
   NAV_GROUP_ORDER,
   type NavGroup,
 } from "@/constants/dashboard";
-import { useProfileContext } from "@/context/ProfileContext";
+import { useProfileContext } from "@/features/profile/context/ProfileContext";
 import { NavItem } from "./NavItem";
 
 /**

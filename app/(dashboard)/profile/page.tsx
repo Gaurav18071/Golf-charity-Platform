@@ -1,78 +1,111 @@
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
-import ProfileForm from "@/components/dashboard/profile/ProfileForm";
+import { Metadata } from "next";
+import { User, Mail, Calendar, Shield } from "lucide-react";
 
-export const dynamic = "force-dynamic";
+export const metadata: Metadata = {
+  title: "My Profile",
+  description: "View and edit your profile information",
+};
 
-export default async function ProfilePage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const profile = await prisma.profile.findUnique({ where: { id: user.id } });
-
+export default function ProfilePage() {
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">My Profile</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Manage your personal information and account details.
+        <h1 className="text-3xl font-bold tracking-tight">My Profile</h1>
+        <p className="text-muted-foreground mt-1">
+          View and manage your profile information
         </p>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-3">
-        {/* Avatar card */}
-        <div className="xl:col-span-1">
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm text-center">
-            <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-emerald-100 text-3xl font-bold text-emerald-700">
-              {(profile?.fullName ?? user.email ?? "U").slice(0, 1).toUpperCase()}
+      {/* Profile Card */}
+      <div className="rounded-lg border bg-card p-6">
+        <div className="flex items-start gap-6">
+          {/* Avatar */}
+          <div className="relative">
+            <div className="h-24 w-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-3xl font-bold">
+              A
             </div>
-            <h2 className="mt-4 text-base font-semibold text-slate-900">
-              {profile?.fullName ?? "—"}
-            </h2>
-            <p className="mt-1 text-sm text-slate-500">{user.email}</p>
-            <span className={[
-              "mt-3 inline-block rounded-full px-3 py-0.5 text-xs font-semibold",
-              profile?.role === "ADMIN"     ? "bg-purple-100 text-purple-700" :
-              profile?.role === "ORGANIZER" ? "bg-emerald-100 text-emerald-700" :
-                                              "bg-blue-100 text-blue-700",
-            ].join(" ")}>
-              {profile?.role ?? "DONOR"}
-            </span>
+            <button className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center hover:bg-primary/90 transition-colors">
+              <User className="h-4 w-4" />
+            </button>
+          </div>
 
-            <dl className="mt-5 space-y-3 text-left border-t border-slate-100 pt-5">
-              <div>
-                <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">Member since</dt>
-                <dd className="mt-0.5 text-sm text-slate-600">
-                  {profile?.createdAt
-                    ? profile.createdAt.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })
-                    : "—"}
-                </dd>
+          {/* Info */}
+          <div className="flex-1">
+            <h2 className="text-2xl font-semibold">Admin Demo</h2>
+            <p className="text-muted-foreground">admin@golfcharity.com</p>
+
+            <div className="flex items-center gap-4 mt-4">
+              <div className="flex items-center gap-2 text-sm">
+                <Shield className="h-4 w-4 text-muted-foreground" />
+                <span>Admin</span>
               </div>
-              <div>
-                <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">Email verified</dt>
-                <dd className={`mt-0.5 text-sm font-medium ${user.email_confirmed_at ? "text-emerald-600" : "text-amber-600"}`}>
-                  {user.email_confirmed_at ? "Verified" : "Pending"}
-                </dd>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Calendar className="h-4 w-4" />
+                <span>Joined {new Date().toLocaleDateString()}</span>
               </div>
-              <div>
-                <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">User ID</dt>
-                <dd className="mt-0.5 truncate font-mono text-xs text-slate-400">{user.id}</dd>
-              </div>
-            </dl>
+            </div>
+          </div>
+
+          {/* Action */}
+          <button className="px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
+            Edit Profile
+          </button>
+        </div>
+      </div>
+
+      {/* Details */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="rounded-lg border bg-card p-6">
+          <h3 className="font-semibold mb-4">Personal Information</h3>
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">
+                Full Name
+              </label>
+              <p className="mt-1">Admin Demo</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">
+                Email
+              </label>
+              <p className="mt-1">admin@golfcharity.com</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">
+                Role
+              </label>
+              <p className="mt-1">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                  Admin
+                </span>
+              </p>
+            </div>
           </div>
         </div>
 
-        {/* Edit form */}
-        <div className="xl:col-span-2">
-          <ProfileForm
-            initialData={{
-              fullName: profile?.fullName ?? user.user_metadata?.full_name ?? "",
-              email: user.email ?? "",
-              avatarUrl: profile?.avatarUrl ?? null,
-            }}
-          />
+        <div className="rounded-lg border bg-card p-6">
+          <h3 className="font-semibold mb-4">Account Activity</h3>
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">
+                Last Login
+              </label>
+              <p className="mt-1">Just now</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">
+                Total Donations
+              </label>
+              <p className="mt-1">View history →</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">
+                Campaigns Created
+              </label>
+              <p className="mt-1">View campaigns →</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>

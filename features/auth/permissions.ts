@@ -1,6 +1,65 @@
-import { ROLES } from "@/constants/roles";
-import { PERMISSIONS, type Permission } from "@/constants/permissions";
+/**
+ * AUTH PERMISSIONS MODULE
+ *
+ * Centralized authorization logic for the Golf Charity Platform.
+ * This is the single source of truth for:
+ * - Permission constants
+ * - Role constants  
+ * - Permission-to-role mappings
+ * - Authorization helpers (hasPermission, isAdmin, etc.)
+ *
+ * DO NOT hardcode permission or role strings anywhere else.
+ *
+ * @module features/auth/permissions
+ */
+
 import type { Profile } from "@/features/profile/profile.types";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ROLES
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Single source of truth for all user role strings.
+ */
+export const ROLES = {
+  ADMIN: "ADMIN",
+  DONOR: "DONOR",
+  ORGANIZER: "ORGANIZER",
+  PENDING_ORGANIZER: "PENDING_ORGANIZER",
+} as const;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PERMISSIONS
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Single source of truth for all permission strings.
+ */
+export const PERMISSIONS = {
+  // ── Campaigns ──────────────────────────────────────────────────────────────
+  VIEW_CAMPAIGNS:    "VIEW_CAMPAIGNS",
+  CREATE_CAMPAIGN:   "CREATE_CAMPAIGN",
+  EDIT_CAMPAIGN:     "EDIT_CAMPAIGN",
+  DELETE_CAMPAIGN:   "DELETE_CAMPAIGN",
+
+  // ── Donations ──────────────────────────────────────────────────────────────
+  DONATE:            "DONATE",
+  VIEW_DONATIONS:    "VIEW_DONATIONS",
+
+  // ── Admin ──────────────────────────────────────────────────────────────────
+  VIEW_ADMIN_DASHBOARD: "VIEW_ADMIN_DASHBOARD",
+  MANAGE_USERS:         "MANAGE_USERS",
+  APPROVE_CAMPAIGNS:    "APPROVE_CAMPAIGNS",
+
+  // ── Profile ────────────────────────────────────────────────────────────────
+  EDIT_PROFILE:      "EDIT_PROFILE",
+} as const;
+
+/**
+ * TypeScript type derived from PERMISSIONS constant.
+ */
+export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
 
 /**
  * ROLE_PERMISSIONS

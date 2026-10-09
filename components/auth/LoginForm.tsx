@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,13 +16,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-export default function LoginForm() {
+interface LoginFormProps {
+  demoEmail?: string;
+  demoPassword?: string;
+}
+
+export default function LoginForm({ demoEmail, demoPassword }: LoginFormProps) {
   const router = useRouter();
 
   const {
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -34,6 +40,14 @@ export default function LoginForm() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Autofill form when demo credentials are provided
+  useEffect(() => {
+    if (demoEmail && demoPassword) {
+      setValue("email", demoEmail, { shouldValidate: true });
+      setValue("password", demoPassword, { shouldValidate: true });
+    }
+  }, [demoEmail, demoPassword, setValue]);
 
   const onSubmit = async (data: LoginFormData) => {
     try {

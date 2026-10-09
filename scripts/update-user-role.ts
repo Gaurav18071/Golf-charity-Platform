@@ -3,16 +3,20 @@
  * 
  * Usage:
  *   npx tsx scripts/update-user-role.ts <user-email> ORGANIZER
+ * 
+ * Requires:
+ *   DATABASE_URL environment variable to be set in .env.local
  */
 
 import { PrismaClient, UserRole } from "@prisma/client";
 
-const DATABASE_URL =
-  "postgresql://postgres.gqlmmbdhkkfctyuvlaef:GolfCharity%40123@aws-1-ap-south-1.pooler.supabase.com:6543/postgres?pgbouncer=true&connect_timeout=15";
+if (!process.env.DATABASE_URL) {
+  console.error("❌ DATABASE_URL environment variable is not set");
+  console.error("Please ensure .env.local contains DATABASE_URL");
+  process.exit(1);
+}
 
-const prisma = new PrismaClient({
-  datasources: { db: { url: DATABASE_URL } },
-});
+const prisma = new PrismaClient();
 
 async function main() {
   const email = process.argv[2];
