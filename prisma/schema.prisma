@@ -92,10 +92,7 @@ model Profile {
   avatarUrl          String?            @map("avatar_url")
 
   role               UserRole           @default(DONOR)
-
-  verificationStatus VerificationStatus
-                     @default(PENDING)
-                     @map("verification_status")
+  verificationStatus VerificationStatus @default(PENDING) @map("verification_status")
 
   createdAt          DateTime           @default(now()) @map("created_at")
   updatedAt          DateTime           @updatedAt @map("updated_at")
@@ -196,38 +193,23 @@ model Organization {
   // Verification
   // ───────────────────────────────
 
-  verificationStatus VerificationStatus
-                     @default(DRAFT)
-                     @map("verification_status")
-
-  submittedAt        DateTime?
-                     @map("submitted_at")
-
-  reviewedAt         DateTime?
-                     @map("reviewed_at")
-
-  adminNotes         String?
-                     @db.Text
-                     @map("admin_notes")
+  verificationStatus VerificationStatus @default(DRAFT) @map("verification_status")
+  submittedAt        DateTime?          @map("submitted_at")
+  reviewedAt         DateTime?          @map("reviewed_at")
+  adminNotes         String?            @db.Text @map("admin_notes")
 
   // ───────────────────────────────
   // Soft Delete
   // ───────────────────────────────
 
-  deletedAt          DateTime?
-                     @map("deleted_at")
+  deletedAt          DateTime?          @map("deleted_at")
 
   // ───────────────────────────────
   // Metadata
   // ───────────────────────────────
 
-  createdAt          DateTime
-                     @default(now())
-                     @map("created_at")
-
-  updatedAt          DateTime
-                     @updatedAt
-                     @map("updated_at")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
 
   // Relations
 
