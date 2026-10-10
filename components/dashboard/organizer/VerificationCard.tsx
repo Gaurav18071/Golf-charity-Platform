@@ -8,7 +8,8 @@ import {
   ShieldAlert,
   ArrowRight,
 } from "lucide-react";
-import type { OrganizationVerificationStatus } from "@prisma/client";
+import type { VerificationStatus } from "@prisma/client";
+import type { OrganizationVerificationStatus } from "@/features/organization/types/organization.types";
 import { SubmitForReviewButton } from "./SubmitForReviewButton";
 
 interface VerificationCardProps {

@@ -6,7 +6,10 @@
  * @module features/organization/types/document.types
  */
 
-import type { DocumentType, DocumentVerificationStatus } from "@prisma/client";
+import type { DocumentType, VerificationStatus } from "@prisma/client";
+
+// Re-export for convenience
+export type DocumentVerificationStatus = VerificationStatus;
 import type { OrganizationDocument } from "./organization.types";
 
 /**

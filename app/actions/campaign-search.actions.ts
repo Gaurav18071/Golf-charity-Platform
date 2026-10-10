@@ -3,7 +3,7 @@
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
-import { CampaignStatus, CampaignCategory } from "@prisma/client";
+import { CampaignStatus } from "@prisma/client";
 import { extractCampaignSearchIntent } from "@/lib/ai/search-service";
 import { buildSearchSummary } from "@/lib/ai/prompts";
 import {
@@ -38,7 +38,7 @@ type SafeCampaignRow = {
   title: string;
   slug: string;
   shortDescription: string;
-  category: CampaignCategory;
+  category: string;
   location: string | null;
   coverImageUrl: string | null;
   goalAmount: { toNumber: () => number } | number;
@@ -82,7 +82,7 @@ function buildPrismaWhere(intent: SearchIntent) {
   };
 
   if (intent.category) {
-    where.category = intent.category as CampaignCategory;
+    where.category = intent.category;
   }
 
   if (intent.location) {

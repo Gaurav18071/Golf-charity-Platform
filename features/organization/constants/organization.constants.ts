@@ -9,11 +9,14 @@
 
 import type {
   OrganizationType,
-  OrganizationVerificationStatus,
   DocumentType,
-  DocumentVerificationStatus,
   WizardStep,
 } from "../types/organization.types";
+
+// Import VerificationStatus from Prisma and create aliases
+import type { VerificationStatus } from "@prisma/client";
+type OrganizationVerificationStatus = VerificationStatus;
+type DocumentVerificationStatus = VerificationStatus;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // VALIDATION CONSTANTS
@@ -86,11 +89,9 @@ export const ORGANIZATION_TYPE_LABELS: Record<OrganizationType, string> = {
   NGO: "Non-Governmental Organization (NGO)",
   TRUST: "Public Charitable Trust",
   SOCIETY: "Registered Society",
+  COMPANY: "Section 8 Company",
   FOUNDATION: "Foundation",
   EDUCATIONAL: "Educational Institution",
-  HOSPITAL: "Hospital / Healthcare",
-  CORPORATE: "Corporate Entity",
-  GOVERNMENT: "Government Body",
   RELIGIOUS: "Religious Organization",
   INDIVIDUAL: "Individual / Sole Proprietor",
   OTHER: "Other",
@@ -106,13 +107,11 @@ export const ORGANIZATION_TYPE_DESCRIPTIONS: Record<
   NGO: "Registered under Section 8 of Companies Act or similar",
   TRUST: "Registered under Indian Trusts Act, 1882",
   SOCIETY: "Registered under Societies Registration Act, 1860",
+  COMPANY: "Section 8 Company under Companies Act, 2013",
   FOUNDATION: "Private or public foundation",
   EDUCATIONAL: "Schools, colleges, universities",
-  HOSPITAL: "Medical institutions and healthcare providers",
-  CORPORATE: "Corporate social responsibility initiatives",
-  GOVERNMENT: "Government agencies and departments",
-  RELIGIOUS: "Religious trusts and institutions",
-  INDIVIDUAL: "Individual fundraiser with valid ID",
+  RELIGIOUS: "Religious or spiritual organizations",
+  INDIVIDUAL: "Individuals running charitable initiatives",
   OTHER: "Other types of charitable organizations",
 };
 
@@ -174,8 +173,8 @@ export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
   PAN_CARD: "PAN Card",
   GST_CERTIFICATE: "GST Certificate",
   TAX_EXEMPTION_CERTIFICATE: "Tax Exemption Certificate (80G/12A)",
-  GOVERNMENT_REGISTRATION: "Government Registration",
-  BANK_STATEMENT: "Bank Statement",
+  BANK_PROOF: "Bank Account Proof",
+  GOVERNMENT_CERTIFICATE: "Government Certificate",
   OTHER: "Other Document",
 };
 
@@ -186,19 +185,15 @@ export const REQUIRED_DOCUMENTS_BY_TYPE: Record<
   OrganizationType,
   DocumentType[]
 > = {
-  NGO: ["REGISTRATION_CERTIFICATE", "PAN_CARD", "BANK_STATEMENT"],
-  TRUST: ["REGISTRATION_CERTIFICATE", "PAN_CARD", "BANK_STATEMENT"],
-  SOCIETY: ["REGISTRATION_CERTIFICATE", "PAN_CARD", "BANK_STATEMENT"],
-  FOUNDATION: ["REGISTRATION_CERTIFICATE", "PAN_CARD", "BANK_STATEMENT"],
-  EDUCATIONAL: ["REGISTRATION_CERTIFICATE", "PAN_CARD", "BANK_STATEMENT"],
-  HOSPITAL: ["REGISTRATION_CERTIFICATE", "PAN_CARD", "BANK_STATEMENT"],
-  CORPORATE: ["REGISTRATION_CERTIFICATE", "PAN_CARD", "GST_CERTIFICATE"],
-  GOVERNMENT: ["GOVERNMENT_REGISTRATION", "BANK_STATEMENT"],
-  RELIGIOUS: ["REGISTRATION_CERTIFICATE", "PAN_CARD", "BANK_STATEMENT"],
-  // Flexible types — documents encouraged but not required to submit.
-  // Admin can request specific docs during the review process.
-  INDIVIDUAL: [],
-  OTHER: [],
+  NGO: ["REGISTRATION_CERTIFICATE", "PAN_CARD", "BANK_PROOF"],
+  TRUST: ["REGISTRATION_CERTIFICATE", "PAN_CARD", "BANK_PROOF"],
+  SOCIETY: ["REGISTRATION_CERTIFICATE", "PAN_CARD", "BANK_PROOF"],
+  COMPANY: ["REGISTRATION_CERTIFICATE", "PAN_CARD", "BANK_PROOF"],
+  FOUNDATION: ["REGISTRATION_CERTIFICATE", "PAN_CARD", "BANK_PROOF"],
+  EDUCATIONAL: ["REGISTRATION_CERTIFICATE", "PAN_CARD", "BANK_PROOF"],
+  RELIGIOUS: ["REGISTRATION_CERTIFICATE", "PAN_CARD", "BANK_PROOF"],
+  INDIVIDUAL: ["PAN_CARD", "BANK_PROOF"],
+  OTHER: ["PAN_CARD", "BANK_PROOF"],
 };
 
 /**
@@ -206,7 +201,9 @@ export const REQUIRED_DOCUMENTS_BY_TYPE: Record<
  */
 export const DOCUMENT_STATUS_LABELS: Record<DocumentVerificationStatus, string> =
   {
+    DRAFT: "Draft",
     PENDING: "Pending Verification",
+    UNDER_REVIEW: "Under Review",
     APPROVED: "Approved",
     REJECTED: "Rejected",
   };
@@ -216,7 +213,9 @@ export const DOCUMENT_STATUS_LABELS: Record<DocumentVerificationStatus, string> 
  */
 export const DOCUMENT_STATUS_COLORS: Record<DocumentVerificationStatus, string> =
   {
+    DRAFT: "bg-gray-100 text-gray-700",
     PENDING: "bg-yellow-100 text-yellow-700",
+    UNDER_REVIEW: "bg-blue-100 text-blue-700",
     APPROVED: "bg-green-100 text-green-700",
     REJECTED: "bg-red-100 text-red-700",
   };

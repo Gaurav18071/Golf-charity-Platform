@@ -11,11 +11,14 @@ import type {
   Organization as PrismaOrganization,
   OrganizationDocument as PrismaOrganizationDocument,
   OrganizationType,
-  OrganizationVerificationStatus,
+  VerificationStatus,
   DocumentType,
-  DocumentVerificationStatus,
   UserRole,
 } from "@prisma/client";
+
+// Type aliases for semantic clarity
+export type OrganizationVerificationStatus = VerificationStatus;
+export type DocumentVerificationStatus = VerificationStatus;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ORGANIZATION TYPES
@@ -334,7 +337,5 @@ export interface WizardState {
 
 export type {
   OrganizationType,
-  OrganizationVerificationStatus,
   DocumentType,
-  DocumentVerificationStatus,
-};
+} from "@prisma/client";

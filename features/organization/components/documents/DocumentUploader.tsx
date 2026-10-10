@@ -38,7 +38,7 @@ export interface DocumentUploaderProps {
   allowTypeSelection?: boolean;
   
   /** Callback when upload succeeds */
-  onSuccess?: (document: { id: string; fileName: string; documentType: string }) => void;
+  onSuccess?: (document: { id: string; fileName: string; documentType: string } | undefined) => void;
   
   /** Callback when upload fails */
   onError?: (error: string) => void;
@@ -89,7 +89,13 @@ export function DocumentUploader({
   const upload = useDocumentUpload({
     organizationId,
     onSuccess: (document) => {
-      onSuccess?.(document);
+      if (document) {
+        onSuccess?.({
+          id: document.id,
+          fileName: document.originalFileName,
+          documentType: document.documentType,
+        });
+      }
       // Reset after successful upload
       setTimeout(() => {
         upload.reset();

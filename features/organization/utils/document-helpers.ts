@@ -68,21 +68,21 @@ export const DOCUMENT_TYPE_METADATA: Record<
     acceptedFormats: "PDF, PNG, JPEG",
     examples: ["80G Certificate", "12A Certificate"],
   },
-  GOVERNMENT_REGISTRATION: {
-    label: "Government Registration",
-    description: "Any additional government registrations",
+  GOVERNMENT_CERTIFICATE: {
+    label: "Government Certificate",
+    description: "Any government certificates or registrations",
     icon: FileText,
     required: false,
     acceptedFormats: "PDF, PNG, JPEG",
-    examples: ["FCRA Certificate", "CSR Registration"],
+    examples: ["FCRA Certificate", "CSR Registration", "Government ID"],
   },
-  BANK_STATEMENT: {
-    label: "Bank Statement",
-    description: "Recent bank statement (last 3 months)",
+  BANK_PROOF: {
+    label: "Bank Account Proof",
+    description: "Bank account verification (statement or cancelled cheque)",
     icon: FileText,
     required: true,
     acceptedFormats: "PDF, PNG, JPEG",
-    examples: ["Account Statement", "Cancelled Cheque"],
+    examples: ["Account Statement", "Cancelled Cheque", "Bank Letter"],
   },
   OTHER: {
     label: "Other Document",

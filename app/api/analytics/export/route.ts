@@ -34,7 +34,16 @@ export async function GET(request: Request) {
 
     const dateWhere = Object.keys(dateFilter).length > 0 ? { createdAt: dateFilter } : {};
 
-    let donations: Awaited<ReturnType<typeof prisma.donation.findMany>> = [];
+    type DonationWithRelations = {
+      id: string;
+      amount: { toString: () => string };
+      status: string;
+      createdAt: Date;
+      campaign: { title: string } | null;
+      donor: { fullName: string | null; email: string } | null;
+    };
+
+    let donations: DonationWithRelations[] = [];
 
     if (profile.role === "ADMIN") {
       donations = await prisma.donation.findMany({

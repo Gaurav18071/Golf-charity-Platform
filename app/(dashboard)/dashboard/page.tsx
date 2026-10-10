@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
-import { DonationStatus, CampaignStatus, OrganizationVerificationStatus } from "@prisma/client";
+import { UserRole } from "@prisma/client";
+import { DonationStatus, CampaignStatus, VerificationStatus } from "@prisma/client";
 import { redirect } from "next/navigation";
 
 import { DonorDashboard } from "@/components/dashboard/role-views/DonorDashboard";
@@ -60,7 +61,7 @@ export default async function DashboardPage() {
             user.user_metadata?.name ||
             user.email?.split("@")[0] ||
             "User",
-          role: (user.user_metadata?.role as string | undefined) ?? "DONOR",
+          role: ((user.user_metadata?.role as string | undefined) ?? "DONOR") as UserRole,
         },
       });
     }
@@ -73,14 +74,29 @@ export default async function DashboardPage() {
   const role = profile?.role ?? (user.user_metadata?.role as string) ?? "DONOR";
 
   // ── Shared: recent donations for current user ─────────────────────────────
-  let sharedDonations: Awaited<ReturnType<typeof prisma.donation.findMany>> = [];
+  let sharedDonations: Array<{
+    id: string;
+    amount: any;
+    status: DonationStatus;
+    donatedAt: Date | null;
+    createdAt: Date;
+    campaign: { title: string } | null;
+  }> = [];
+  
   if (isUuid) {
     try {
       sharedDonations = await prisma.donation.findMany({
         where: { donorId: user.id },
         orderBy: { createdAt: "desc" },
         take: 5,
-        include: { campaign: { select: { title: true } } },
+        select: {
+          id: true,
+          amount: true,
+          status: true,
+          donatedAt: true,
+          createdAt: true,
+          campaign: { select: { title: true } },
+        },
       });
     } catch (err) {
       console.warn("Could not fetch user donations:", err);
@@ -115,7 +131,7 @@ export default async function DashboardPage() {
       }).catch(() => ({ _sum: { amount: 0 } })),
       prisma.organization.count({ 
         where: { 
-          verificationStatus: { in: [OrganizationVerificationStatus.PENDING, OrganizationVerificationStatus.UNDER_REVIEW] },
+          verificationStatus: { in: [VerificationStatus.PENDING, VerificationStatus.UNDER_REVIEW] },
           deletedAt: null,
         } 
       }).catch(() => 0),
@@ -124,7 +140,14 @@ export default async function DashboardPage() {
         where: { status: DonationStatus.COMPLETED },
         orderBy: { createdAt: "desc" },
         take: 5,
-        include: { campaign: { select: { title: true } } },
+        select: {
+          id: true,
+          amount: true,
+          status: true,
+          donatedAt: true,
+          createdAt: true,
+          campaign: { select: { title: true } },
+        },
       }).catch(() => []),
     ]);
 
@@ -239,7 +262,15 @@ export default async function DashboardPage() {
       ? calculateCompletionPercentage(organization, docCount)
       : 100;
 
-    let orgDonations: Awaited<ReturnType<typeof prisma.donation.findMany>> = [];
+    let orgDonations: Array<{
+      id: string;
+      amount: any;
+      status: DonationStatus;
+      donatedAt: Date | null;
+      createdAt: Date;
+      campaign: { title: string } | null;
+    }> = [];
+    
     if (isUuid) {
       try {
         orgDonations = await prisma.donation.findMany({
@@ -249,7 +280,14 @@ export default async function DashboardPage() {
           },
           orderBy: { createdAt: "desc" },
           take: 5,
-          include: { campaign: { select: { title: true } } },
+          select: {
+            id: true,
+            amount: true,
+            status: true,
+            donatedAt: true,
+            createdAt: true,
+            campaign: { select: { title: true } },
+          },
         });
       } catch (e) {
         console.warn("Could not fetch org donations:", e);

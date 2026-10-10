@@ -36,6 +36,7 @@ import type {
   ReviewOrganizationResponse,
   ListOrganizationsResponse,
 } from "../types/organization-response.types";
+import type { OrganizationWithDocuments } from "../types/organization.types";
 import type {
   CompleteOrganizationFormData,
   PartialOrganizationFormData,
@@ -217,7 +218,7 @@ export async function getMyOrganizationAction(
 
     return {
       success: true,
-      data: { organization: organization as unknown }, // Type assertion due to conditional include
+      data: { organization: organization as OrganizationWithDocuments }, // Type assertion due to conditional include
     };
   } catch (error) {
     console.error("[getMyOrganizationAction] Error:", error);
@@ -266,7 +267,7 @@ export async function getOrganizationByIdAction(
 
     return {
       success: true,
-      data: { organization: organization as unknown },
+      data: { organization: organization as OrganizationWithDocuments },
     };
   } catch (error) {
     console.error("[getOrganizationByIdAction] Error:", error);

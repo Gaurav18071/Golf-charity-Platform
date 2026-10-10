@@ -12,8 +12,9 @@ import type {
   OrganizationDocument,
   CreateDocumentInput,
   UpdateDocumentInput,
+  DocumentVerificationStatus,
 } from "../types/organization.types";
-import type { DocumentType, DocumentVerificationStatus } from "@prisma/client";
+import type { DocumentType, VerificationStatus } from "@prisma/client";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CREATE OPERATIONS

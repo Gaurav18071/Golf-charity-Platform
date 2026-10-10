@@ -20,8 +20,10 @@ import type {
 } from "../types/organization.types";
 import type {
   OrganizationType,
-  OrganizationVerificationStatus,
+  VerificationStatus,
 } from "@prisma/client";
+
+type OrganizationVerificationStatus = VerificationStatus;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CREATE OPERATIONS

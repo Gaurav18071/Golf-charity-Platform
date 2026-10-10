@@ -11,8 +11,10 @@ import { z } from "zod";
 import { VALIDATION_RULES } from "../constants/organization.constants";
 import {
   OrganizationType,
-  OrganizationVerificationStatus,
+  VerificationStatus,
 } from "@prisma/client";
+
+export const OrganizationVerificationStatus = VerificationStatus;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // STEP 1: BASIC INFORMATION

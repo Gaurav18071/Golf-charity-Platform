@@ -18,7 +18,8 @@ import {
   type RecentDonationItem,
 } from "@/components/dashboard/widgets";
 import { VerificationCard } from "@/components/dashboard/organizer/VerificationCard";
-import type { OrganizationVerificationStatus } from "@prisma/client";
+import type { VerificationStatus } from "@prisma/client";
+import type { OrganizationVerificationStatus } from "@/features/organization/types/organization.types";
 
 interface OrganizerDashboardProps {
   userName: string;

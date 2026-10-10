@@ -11,8 +11,9 @@ import type {
   WizardStep,
   WizardState,
   StepStatus,
+  OrganizationVerificationStatus,
 } from "../types/organization.types";
-import type { OrganizationVerificationStatus } from "@prisma/client";
+import type { VerificationStatus } from "@prisma/client";
 import {
   WIZARD_STEPS,
   ALLOWED_STATUS_TRANSITIONS,

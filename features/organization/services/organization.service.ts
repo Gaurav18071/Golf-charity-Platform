@@ -25,9 +25,11 @@ import type {
 } from "../types/organization.types";
 import type {
   OrganizationType,
-  OrganizationVerificationStatus,
+  VerificationStatus,
   UserRole,
 } from "@prisma/client";
+
+type OrganizationVerificationStatus = VerificationStatus;
 import {
   ALLOWED_STATUS_TRANSITIONS,
   REQUIRED_DOCUMENTS_BY_TYPE,

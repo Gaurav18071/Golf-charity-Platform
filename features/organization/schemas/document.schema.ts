@@ -8,7 +8,7 @@
 
 import { z } from "zod";
 import { FILE_UPLOAD_RULES } from "../constants/organization.constants";
-import { DocumentType, DocumentVerificationStatus } from "@prisma/client";
+import { DocumentType, VerificationStatus as DocumentVerificationStatus } from "@prisma/client";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DOCUMENT UPLOAD SCHEMA

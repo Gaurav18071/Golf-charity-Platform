@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
-import { CampaignStatus, CampaignCategory } from "@prisma/client";
+import { CampaignStatus } from "@prisma/client";
 import { createNotification } from "@/features/notification/services/notification.service";
 
 async function requireAdminAuth() {
@@ -189,24 +189,22 @@ export async function updateCampaignAction(input: UpdateCampaignInput): Promise<
       return { success: false, error: "Unauthorized to edit this campaign" };
     }
 
-    const categoryMap: Record<string, CampaignCategory> = {
-      EDUCATION: CampaignCategory.EDUCATION,
-      HEALTHCARE: CampaignCategory.HEALTHCARE,
-      ENVIRONMENT: CampaignCategory.ENVIRONMENT,
-      ANIMAL_WELFARE: CampaignCategory.ANIMAL_WELFARE,
-      DISASTER_RELIEF: CampaignCategory.DISASTER_RELIEF,
-      FOOD: CampaignCategory.FOOD,
-      SPORTS: CampaignCategory.SPORTS,
-      COMMUNITY: CampaignCategory.COMMUNITY,
-      CHILD_WELFARE: CampaignCategory.CHILD_WELFARE,
-      ELDERLY_SUPPORT: CampaignCategory.ELDERLY_SUPPORT,
-      OTHER: CampaignCategory.OTHER,
+    const categoryMap: Record<string, string> = {
+      EDUCATION: 'EDUCATION',
+      HEALTHCARE: 'HEALTHCARE',
+      ENVIRONMENT: 'ENVIRONMENT',
+      ANIMAL_WELFARE: 'ANIMAL_WELFARE',
+      DISASTER_RELIEF: 'DISASTER_RELIEF',
+      FOOD: 'FOOD',
+      SPORTS: 'SPORTS',
+      COMMUNITY: 'COMMUNITY',
+      CHILD_WELFARE: 'CHILD_WELFARE',
+      ELDERLY_SUPPORT: 'ELDERLY_SUPPORT',
+      OTHER: 'OTHER',
     };
 
     const category =
-      categoryMap[input.category.toUpperCase()] ||
-      (CampaignCategory[input.category.toUpperCase() as keyof typeof CampaignCategory] ??
-        existing.category);
+      categoryMap[input.category.toUpperCase()] || existing.category;
 
     const shortDesc =
       input.shortDescription?.trim() ||
