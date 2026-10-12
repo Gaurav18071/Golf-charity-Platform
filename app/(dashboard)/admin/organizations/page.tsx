@@ -9,7 +9,7 @@ import {
   getOrganizationsPendingReview,
 } from "@/features/organization/services/organization.service";
 import { VERIFICATION_STATUS_COLORS } from "@/features/organization/constants/organization.constants";
-import { VerificationStatus } from "@prisma/client";
+import type { VerificationStatus } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
