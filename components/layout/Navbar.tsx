@@ -9,7 +9,7 @@ const NAV_LINKS = [
   { label: "Leaderboard", href: "/leaderboard" },
   { label: "How It Works", href: "/how-it-works" },
   { label: "Charities", href: "/charities" },
-  { label: "Draw Results", href: "/winner" },
+  { label: "Featured Campaign", href: "/winner" },
   { label: "Contact", href: "/support" },
 ];
 
