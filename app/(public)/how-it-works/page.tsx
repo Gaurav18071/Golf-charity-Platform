@@ -1,5 +1,17 @@
 import { Users, Heart, CheckCircle2, TrendingUp } from "lucide-react";
 import Link from "next/link";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "How It Works | Golf Charity Platform",
+  description: "Learn how to support charitable causes through our platform. Browse campaigns, make donations, track impact, and join our community of givers.",
+  keywords: ["how it works", "donation process", "charity platform", "golf charity", "fundraising guide"],
+  openGraph: {
+    title: "How It Works - Golf Charity Platform",
+    description: "Simple steps to make a difference: Browse, Donate, Track Impact, Join Community",
+    type: "website",
+  },
+};
 
 export default function HowItWorks() {
   const steps = [

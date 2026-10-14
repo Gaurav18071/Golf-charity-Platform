@@ -2,10 +2,22 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Building2, CheckCircle2, Clock, MapPin, ExternalLink } from "lucide-react";
 import { Prisma } from "@prisma/client";
+import type { Metadata } from "next";
 
 // Force dynamic rendering to avoid database connection during build
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+
+export const metadata: Metadata = {
+  title: "Partner Organizations | Golf Charity Platform",
+  description: "Meet our verified charitable organizations making a difference. Browse approved nonprofits, their active campaigns, and verification status.",
+  keywords: ["charity organizations", "verified nonprofits", "partner charities", "golf charity platform", "charitable causes"],
+  openGraph: {
+    title: "Partner Organizations - Verified Charities",
+    description: "Meet the verified charitable organizations making a difference through our platform",
+    type: "website",
+  },
+};
 
 export default async function Charities() {
   let organizations: Array<{
@@ -25,6 +37,8 @@ export default async function Charities() {
       goalAmount: Prisma.Decimal;
     }>;
   }> = [];
+  
+  let hasError = false;
   
   try {
     organizations = await prisma.organization.findMany({
@@ -66,6 +80,7 @@ export default async function Charities() {
     });
   } catch (error) {
     console.error("Failed to fetch organizations:", error);
+    hasError = true;
     organizations = [];
   }
 
@@ -108,7 +123,24 @@ export default async function Charities() {
         </div>
 
         {/* Organizations Grid */}
-        {organizations.length === 0 ? (
+        {hasError ? (
+          <div className="text-center p-12 bg-red-50 border-2 border-red-200 rounded-2xl shadow-lg max-w-2xl mx-auto">
+            <div className="text-red-600 mb-6">
+              <svg className="w-20 h-20 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-700 mb-4">
+              Temporarily Unavailable
+            </h2>
+            <p className="text-gray-600 mb-6">
+              We&apos;re having trouble loading organizations. The server needs to be restarted.
+            </p>
+            <p className="text-sm text-gray-500 font-mono bg-gray-100 p-3 rounded">
+              Restart dev server: Ctrl+C → npm run dev
+            </p>
+          </div>
+        ) : organizations.length === 0 ? (
           <div className="text-center p-12 bg-white rounded-2xl shadow-lg max-w-2xl mx-auto">
             <Building2 className="w-20 h-20 mx-auto mb-6 text-gray-400" />
             <h2 className="text-2xl font-bold text-gray-700 mb-4">

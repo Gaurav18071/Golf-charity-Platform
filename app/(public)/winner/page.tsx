@@ -3,10 +3,22 @@ import { formatCurrency } from "@/lib/utils";
 import Link from "next/link";
 import { CheckCircle2, Users, Target, Award } from "lucide-react";
 import { Prisma } from "@prisma/client";
+import type { Metadata } from "next";
 
 // Force dynamic rendering to avoid database connection during build
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+
+export const metadata: Metadata = {
+  title: "Featured Campaign | Golf Charity Platform",
+  description: "This month's spotlight campaign making an incredible impact. Support our featured charitable cause and help reach the fundraising goal.",
+  keywords: ["featured campaign", "charity spotlight", "monthly campaign", "golf charity", "donate"],
+  openGraph: {
+    title: "Featured Campaign - Support Our Cause",
+    description: "Support this month's featured campaign and make a difference",
+    type: "website",
+  },
+};
 
 type FeaturedCampaignType = {
   id: string;
@@ -27,6 +39,7 @@ type FeaturedCampaignType = {
 
 export default async function FeaturedCampaign() {
   let featuredCampaign: FeaturedCampaignType = null;
+  let hasError = false;
   
   try {
     // Get the campaign with the most funds raised that is currently active
@@ -54,7 +67,31 @@ export default async function FeaturedCampaign() {
     });
   } catch (error) {
     console.error("Failed to fetch featured campaign:", error);
+    hasError = true;
     featuredCampaign = null;
+  }
+
+  if (hasError) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center p-12 bg-white rounded-2xl shadow-lg max-w-2xl">
+          <div className="text-red-600 mb-6">
+            <svg className="w-20 h-20 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h1 className="text-3xl font-bold text-gray-700 mb-4">
+            Database Connection Error
+          </h1>
+          <p className="text-xl text-gray-500 mb-6">
+            Unable to load campaign data. Please restart the dev server.
+          </p>
+          <p className="text-sm text-gray-400 font-mono bg-gray-100 p-3 rounded">
+            Ctrl+C → npm run dev
+          </p>
+        </div>
+      </div>
+    );
   }
 
   if (!featuredCampaign) {

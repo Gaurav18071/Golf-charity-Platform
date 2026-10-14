@@ -2,10 +2,22 @@ import { prisma } from "@/lib/prisma";
 import { formatCurrency } from "@/lib/utils";
 import Link from "next/link";
 import { Prisma } from "@prisma/client";
+import type { Metadata } from "next";
 
 // Force dynamic rendering to avoid database connection during build
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+
+export const metadata: Metadata = {
+  title: "Campaign Leaderboard | Golf Charity Platform",
+  description: "Discover the top-performing charity campaigns making the biggest impact. View fundraising leaders, donation progress, and support causes that matter.",
+  keywords: ["charity leaderboard", "top campaigns", "fundraising leaders", "golf charity", "donations"],
+  openGraph: {
+    title: "Campaign Leaderboard - Top Fundraising Campaigns",
+    description: "Top campaigns making the biggest impact in our community",
+    type: "website",
+  },
+};
 
 export default async function Leaderboard() {
   let topCampaigns: Array<{
@@ -16,6 +28,8 @@ export default async function Leaderboard() {
     category: string;
     organization: { name: string };
   }> = [];
+  
+  let hasError = false;
   
   try {
     topCampaigns = await prisma.campaign.findMany({
@@ -44,6 +58,7 @@ export default async function Leaderboard() {
   } catch (error) {
     console.error("Failed to fetch campaigns for leaderboard:", error);
     // Return empty array - page will show "no campaigns" message
+    hasError = true;
     topCampaigns = [];
   }
 
@@ -60,7 +75,18 @@ export default async function Leaderboard() {
         </div>
 
         <div className="bg-white shadow-2xl rounded-2xl overflow-hidden max-w-6xl mx-auto">
-          {topCampaigns.length === 0 ? (
+          {hasError ? (
+            <div className="p-12 text-center">
+              <div className="text-red-600 mb-6">
+                <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <p className="text-lg font-semibold text-gray-700 mb-2">Database Connection Error</p>
+              <p className="text-gray-500 mb-4">Please restart the dev server</p>
+              <p className="text-sm text-gray-400 font-mono">Ctrl+C → npm run dev</p>
+            </div>
+          ) : topCampaigns.length === 0 ? (
             <div className="p-12 text-center text-gray-500">
               <p className="text-lg">No campaigns available yet. Check back soon!</p>
             </div>
